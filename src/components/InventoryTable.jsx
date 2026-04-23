@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
-const CATEGORIES = ["Herramientas", "Electricidad", "Plomería", "Construcción", "Pinturas", "Jardinería"];
+const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
 
 export function InventoryTable({ products, onAddProduct, onEditProduct, onDeleteProduct }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,20 +12,21 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
 
   const [formData, setFormData] = useState({
     id: '',
-    name: '',
+    centimetros: '',
+    isCocktail: false,
     category: CATEGORIES[0],
+    unitsPerPackage: '',
     stock: '',
+    minStock: '',
     price: '',
-    cost: '',
-    vendor: '',
-    expirationDate: ''
+    cost: ''
   });
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -33,13 +34,14 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
     setEditingId(null);
     setFormData({
       id: '',
-      name: '',
+      centimetros: '',
+      isCocktail: false,
       category: CATEGORIES[0],
+      unitsPerPackage: '',
       stock: '',
+      minStock: '',
       price: '',
-      cost: '',
-      vendor: '',
-      expirationDate: ''
+      cost: ''
     });
     setIsModalOpen(true);
   };
@@ -48,26 +50,36 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
     setEditingId(product.id);
     setFormData({
       id: product.id,
-      name: product.name,
+      centimetros: product.centimetros || '',
+      isCocktail: product.isCocktail || false,
       category: product.category,
+      unitsPerPackage: product.unitsPerPackage || '',
       stock: product.stock,
+      minStock: product.minStock || '',
       price: product.price,
-      cost: product.cost || '',
-      vendor: product.vendor || '',
-      expirationDate: product.expirationDate || ''
+      cost: product.cost || ''
     });
     setIsModalOpen(true);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.stock || !formData.price) return;
+    if (!formData.centimetros || !formData.stock || !formData.price || !formData.unitsPerPackage) return;
+    
+    // Generar nombre basado en la categoría, centímetros y unidades por paquete
+    const cocktailText = formData.isCocktail ? " (Cóctel)" : "";
+    const packageText = ` x${formData.unitsPerPackage} uds`;
+    const generatedName = formData.category.toLowerCase() === "sopaipillas" 
+      ? `Paquete Masas Sopaipillas ${formData.centimetros}cm${packageText}${cocktailText}`
+      : `Paquete Masas ${formData.category} ${formData.centimetros}cm${packageText}${cocktailText}`;
 
     if (editingId) {
       // Editar producto existente
       const updatedProduct = {
         ...formData,
+        name: generatedName,
         stock: Number(formData.stock),
+        minStock: Number(formData.minStock) || 5, // Default warning at 5
         price: Number(formData.price),
         cost: Number(formData.cost)
       };
@@ -84,7 +96,9 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
       const newProduct = {
         ...formData,
         id: generatedId,
+        name: generatedName,
         stock: Number(formData.stock),
+        minStock: Number(formData.minStock) || 5, // Default warning at 5
         price: Number(formData.price)
       };
       onAddProduct(newProduct);
@@ -180,14 +194,14 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Producto</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Centímetros</label>
                 <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
+                  type="number"
+                  name="centimetros"
+                  value={formData.centimetros}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej. Martillo"
+                  placeholder="Ej. 15"
                   required
                 />
               </div>
@@ -203,7 +217,22 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unidades por Bolsa</label>
+                <select
+                  name="unitsPerPackage"
+                  value={formData.unitsPerPackage}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" disabled>Seleccionar unidades...</option>
+                  <option value="10">10 Unidades</option>
+                  <option value="20">20 Unidades</option>
+                  <option value="25">25 Unidades</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock (Unidades)</label>
                 <input
                   type="number"
                   name="stock"
@@ -227,12 +256,24 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
                     value={formData.price}
                     onChange={handleInputChange}
                     className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                    step="0.01"
+                    placeholder="0"
                     min="0"
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Aviso de Stock Mínimo</label>
+                <input
+                  type="number"
+                  name="minStock"
+                  value={formData.minStock}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 5"
+                  min="0"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Costo (Compra)</label>
@@ -246,33 +287,24 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
                     value={formData.cost}
                     onChange={handleInputChange}
                     className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                    step="0.01"
+                    placeholder="0"
                     min="0"
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-                <input
-                  type="text"
-                  name="vendor"
-                  value={formData.vendor}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nombre del proveedor"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento</label>
+              <div className="flex items-center mt-6">
                 <input
-                  type="date"
-                  name="expirationDate"
-                  value={formData.expirationDate}
+                  type="checkbox"
+                  id="isCocktail"
+                  name="isCocktail"
+                  checked={formData.isCocktail}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
+                <label htmlFor="isCocktail" className="ml-2 block text-sm text-gray-900">
+                  Es para Cóctel
+                </label>
               </div>
               
               <div className="md:col-span-2 flex justify-end gap-3 mt-4">
@@ -303,16 +335,15 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Producto</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock (Unidades)</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Bolsa</th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
                     {products.length === 0 ? "No hay productos en el inventario" : "No se encontraron productos con estos filtros"}
                   </td>
                 </tr>
@@ -338,22 +369,19 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={twMerge(
                         "flex items-center text-sm font-medium",
-                        product.stock < 5 ? "text-red-600" : "text-green-600"
+                        product.stock <= (product.minStock || 5) ? "text-red-600" : "text-green-600"
                       )}>
                         {product.stock}
-                        {product.stock < 5 && (
+                        {product.stock <= (product.minStock || 5) && (
                           <AlertTriangle className="ml-2 w-4 h-4 text-red-500" />
                         )}
                       </div>
-                      {product.stock < 5 && (
-                         <span className="text-xs text-red-500">Reordenar</span>
+                      {product.stock <= (product.minStock || 5) && (
+                         <span className="text-xs text-red-500">Reordenar (Mín: {product.minStock || 5})</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${product.price.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.vendor}
+                      {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">

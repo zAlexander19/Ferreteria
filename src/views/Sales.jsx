@@ -21,19 +21,24 @@ export function Sales({ products, onCompleteSale }) {
 
   const addToCart = (product) => {
     const existingItem = cart.find(item => item.id === product.id);
+    const unitsPerBag = parseInt(product.unitsPerPackage) || 1;
     
     if (existingItem) {
-      if (existingItem.quantity < product.stock) {
+      if ((existingItem.quantity + 1) * unitsPerBag <= product.stock) {
         setCart(cart.map(item => 
           item.id === product.id 
             ? { ...item, quantity: item.quantity + 1 } 
             : item
         ));
       } else {
-        alert("No hay suficiente stock disponible");
+        alert("No hay suficiente stock en unidades disponible para armar otra bolsa");
       }
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      if (unitsPerBag <= product.stock) {
+        setCart([...cart, { ...product, quantity: 1 }]);
+      } else {
+        alert("No hay suficiente stock en unidades disponible para armar una bolsa");
+      }
     }
     setSearchTerm(''); // Clear search after adding
   };
@@ -46,10 +51,14 @@ export function Sales({ products, onCompleteSale }) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    if (newQuantity > 0 && newQuantity <= product.stock) {
+    const unitsPerBag = parseInt(product.unitsPerPackage) || 1;
+
+    if (newQuantity > 0 && newQuantity * unitsPerBag <= product.stock) {
       setCart(cart.map(item => 
         item.id === productId ? { ...item, quantity: newQuantity } : item
       ));
+    } else if (newQuantity > 0) {
+      alert("No hay suficiente stock en unidades disponible");
     }
   };
 
@@ -57,7 +66,8 @@ export function Sales({ products, onCompleteSale }) {
 
   const handleFinalizeSale = () => {
     if (cart.length === 0) return;
-    if (window.confirm(`¿Confirmar venta por total de $${total.toFixed(2)}?`)) {
+    const formattedTotal = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(total);
+    if (window.confirm(`¿Confirmar venta por total de ${formattedTotal}?`)) {
       onCompleteSale(cart);
       setCart([]);
       alert("¡Venta realizada con éxito!");
@@ -95,9 +105,11 @@ export function Sales({ products, onCompleteSale }) {
                 >
                   <div>
                     <div className="font-medium text-gray-800">{product.name}</div>
-                    <div className="text-xs text-gray-500">SKU: {product.id} | Stock: {product.stock}</div>
+                    <div className="text-xs text-gray-500">SKU: {product.id} | Stock (Unidades): {product.stock} | Equivale a: {Math.floor(product.stock / parseInt(product.unitsPerPackage || 1))} bolsas posibles</div>
                   </div>
-                  <div className="font-semibold text-blue-600">${product.price.toFixed(2)}</div>
+                  <div className="font-semibold text-blue-600">
+                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}
+                  </div>
                 </button>
               ))}
             </div>
@@ -107,9 +119,9 @@ export function Sales({ products, onCompleteSale }) {
 
       <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden">
         <div className="p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-500 grid grid-cols-12 gap-4">
-          <div className="col-span-6">Producto</div>
-          <div className="col-span-2 text-center">Cantidad</div>
-          <div className="col-span-2 text-right">Precio</div>
+          <div className="col-span-6">Producto (Bolsa)</div>
+          <div className="col-span-2 text-center">Cant. Bolsas</div>
+          <div className="col-span-2 text-right">Precio Bolsa</div>
           <div className="col-span-2 text-right">Total</div>
         </div>
         
@@ -143,10 +155,12 @@ export function Sales({ products, onCompleteSale }) {
                   </button>
                 </div>
                 <div className="col-span-2 text-right text-gray-600">
-                  ${item.price.toFixed(2)}
+                  {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(item.price)}
                 </div>
                 <div className="col-span-2 flex items-center justify-end gap-4">
-                  <span className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
+                  <span className="font-bold text-gray-900">
+                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(item.price * item.quantity)}
+                  </span>
                   <button 
                     onClick={() => removeFromCart(item.id)}
                     className="text-red-500 hover:text-red-700"
@@ -162,7 +176,9 @@ export function Sales({ products, onCompleteSale }) {
         <div className="p-6 bg-gray-50 border-t border-gray-200">
           <div className="flex justify-between items-center mb-6">
             <span className="text-xl font-medium text-gray-600">Total a Pagar:</span>
-            <span className="text-3xl font-bold text-blue-600">${total.toFixed(2)}</span>
+            <span className="text-3xl font-bold text-blue-600">
+              {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(total)}
+            </span>
           </div>
           <button
             onClick={handleFinalizeSale}

@@ -2,84 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { InventoryTable } from './components/InventoryTable';
 import { Sales } from './views/Sales';
 import { Statistics } from './views/Statistics';
-import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package } from 'lucide-react';
+import { Orders } from './views/Orders';
+import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, ClipboardList } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('inventory');
   
   // Inicializar estado desde LocalStorage si existe, si no, usar datos por defecto
   const [products, setProducts] = useState(() => {
-    const savedProducts = localStorage.getItem('ferreteria_products');
+    const savedProducts = localStorage.getItem('masas_products');
     if (savedProducts) {
       return JSON.parse(savedProducts);
     }
-    return [
-    { 
-      id: 'HER-001', 
-      name: 'Martillo de Uña', 
-      category: 'Herramientas', 
-      stock: 15, 
-      price: 12.50, 
-      cost: 8.50,
-      vendor: 'FerreTools SA',
-      salesCount: 120,
-      lastSaleDate: '2023-10-15',
-      expirationDate: ''
-    },
-    { 
-      id: 'ELE-042', 
-      name: 'Cable Calibre 12', 
-      category: 'Electricidad', 
-      stock: 3, 
-      price: 0.80, 
-      cost: 0.50,
-      vendor: 'CablesMex',
-      salesCount: 500,
-      lastSaleDate: '2023-10-20',
-      expirationDate: ''
-    },
-    { 
-      id: 'PLM-105', 
-      name: 'Tubo PVC 1/2"', 
-      category: 'Plomería', 
-      stock: 50, 
-      price: 3.20, 
-      cost: 2.10,
-      vendor: 'Plastifuerte',
-      salesCount: 45,
-      lastSaleDate: '2023-09-28',
-      expirationDate: ''
-    },
-    { 
-      id: 'CON-201', 
-      name: 'Cemento Gris 50kg', 
-      category: 'Construcción', 
-      stock: 5, 
-      price: 180.00, 
-      cost: 140.00,
-      vendor: 'Cemex',
-      salesCount: 8,
-      lastSaleDate: '2023-10-05',
-      expirationDate: '2023-12-31'
-    },
-    { 
-      id: 'PNT-305', 
-      name: 'Sellador Vinílico 4L', 
-      category: 'Pinturas', 
-      stock: 2, 
-      price: 350.50, 
-      cost: 260.00,
-      vendor: 'Comex',
-      salesCount: 12,
-      lastSaleDate: '2023-08-15',
-      expirationDate: '2023-11-20'
-    },
-  ]});
+    return [];
+  });
 
   // Guardar en LocalStorage cada vez que cambien los productos
   useEffect(() => {
-    localStorage.setItem('ferreteria_products', JSON.stringify(products));
+    localStorage.setItem('masas_products', JSON.stringify(products));
   }, [products]);
+
+  const [orders, setOrders] = useState(() => {
+    const savedOrders = localStorage.getItem('masas_orders');
+    if (savedOrders) {
+      return JSON.parse(savedOrders);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('masas_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  const [sales, setSales] = useState(() => {
+    const savedSales = localStorage.getItem('masas_sales');
+    if (savedSales) {
+      return JSON.parse(savedSales);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('masas_sales', JSON.stringify(sales));
+  }, [sales]);
 
   const handleAddProduct = (newProduct) => {
     setProducts([...products, newProduct]);
@@ -94,14 +59,17 @@ function App() {
   };
 
   const handleCompleteSale = (cartItems) => {
-    // Deduct stock and update sales stats
-    const today = new Date().toISOString().split('T')[0];
+    // Deduct stock (in units) and update sales stats
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
     const updatedProducts = products.map(product => {
       const soldItem = cartItems.find(item => item.id === product.id);
       if (soldItem) {
+        const unitsSold = soldItem.quantity * (parseInt(product.unitsPerPackage) || 1);
         return { 
           ...product, 
-          stock: product.stock - soldItem.quantity,
+          stock: product.stock - unitsSold,
           salesCount: (product.salesCount || 0) + soldItem.quantity,
           lastSaleDate: today
         };
@@ -109,6 +77,30 @@ function App() {
       return product;
     });
     setProducts(updatedProducts);
+
+    // Guardar la venta en el historial
+    const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const newSale = {
+      id: `VEN-${Date.now().toString().slice(-6)}`,
+      date: now.toISOString(),
+      items: cartItems,
+      total: total
+    };
+    setSales([...sales, newSale]);
+  };
+
+  const handleAddOrder = (newOrder) => {
+    setOrders([...orders, newOrder]);
+  };
+
+  const handleUpdateOrderStatus = (orderId, status) => {
+    setOrders(orders.map(order => 
+      order.id === orderId ? { ...order, status } : order
+    ));
+  };
+
+  const handleDeleteOrder = (orderId) => {
+    setOrders(orders.filter(order => order.id !== orderId));
   };
 
   return (
@@ -120,7 +112,7 @@ function App() {
              <div className="bg-blue-600 p-2 rounded-lg">
                <Package className="w-6 h-6 text-white" />
              </div>
-             <h1 className="text-xl font-bold text-gray-800">Ferretería<br/><span className="text-sm font-normal text-gray-500">Gestión V1.0</span></h1>
+             <h1 className="text-xl font-bold text-gray-800">Fábrica de Masas<br/><span className="text-sm font-normal text-gray-500">Gestión V1.0</span></h1>
            </div>
         </div>
 
@@ -147,6 +139,18 @@ function App() {
           >
             <ShoppingCart className="w-5 h-5" />
             Punto de Venta
+          </button>
+
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              activeTab === 'orders' 
+                ? 'bg-blue-50 text-blue-700 font-medium' 
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <ClipboardList className="w-5 h-5" />
+            Pedidos
           </button>
 
           <button
@@ -179,7 +183,7 @@ function App() {
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shadow-sm">
            <h2 className="text-2xl font-bold text-gray-800">
-             {activeTab === 'inventory' ? 'Panel de Inventario' : activeTab === 'sales' ? 'Nueva Venta' : 'Estadísticas y Reportes'}
+             {activeTab === 'inventory' ? 'Panel de Inventario' : activeTab === 'sales' ? 'Nueva Venta' : activeTab === 'orders' ? 'Gestión de Pedidos' : 'Estadísticas y Reportes'}
            </h2>
            <div className="flex items-center gap-4">
              <div className="text-right hidden sm:block">
@@ -206,8 +210,17 @@ function App() {
               products={products} 
               onCompleteSale={handleCompleteSale}
             />
+          ) : activeTab === 'orders' ? (
+            <Orders 
+              products={products}
+              orders={orders}
+              onAddOrder={handleAddOrder}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+              onDeleteOrder={handleDeleteOrder}
+              onCompleteOrderStock={handleCompleteSale}
+            />
           ) : (
-            <Statistics products={products} />
+            <Statistics products={products} sales={sales} />
           )}
         </div>
       </main>
