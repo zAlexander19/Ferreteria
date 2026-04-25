@@ -113,21 +113,21 @@ export function Statistics({ products, sales = [] }) {
   }, [products]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Tabla de Ventas Realizadas */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
             Ventas Realizadas
           </h3>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
             <Filter className="w-5 h-5 text-gray-400" />
             
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               title="Filtrar por categoría"
             >
               <option value="">Todas las categorías</option>
@@ -140,7 +140,7 @@ export function Statistics({ products, sales = [] }) {
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               title="Filtrar por fecha"
             />
             
@@ -199,9 +199,9 @@ export function Statistics({ products, sales = [] }) {
             </tbody>
           </table>
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm font-medium text-gray-600">
+          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-sm font-medium text-gray-600">
            <span>Total de ventas mostradas: {filteredSales.length}</span>
-           <span className="text-lg text-blue-700">
+            <span className="text-base sm:text-lg text-blue-700 break-all">
              Total Recaudado: {filteredSales.reduce((acc, curr) => acc + curr.total, 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
            </span>
         </div>
@@ -210,7 +210,7 @@ export function Statistics({ products, sales = [] }) {
       {/* Contenedor principal para Estadísticas Superiores */}
       <div className="flex flex-col gap-6 mb-6">
         {/* Gráfico de Barras de Stock (Ancho de todo el dashboard) */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-blue-100 flex flex-col">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-blue-100 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700">Estado de Inventario</h3>
             <Package className="w-5 h-5 text-blue-500" />
@@ -220,7 +220,7 @@ export function Statistics({ products, sales = [] }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.stockChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="shortName" tick={{ fontSize: 12 }} />
                   <YAxis />
                   <RechartsTooltip 
                     formatter={(value, name, props) => {
@@ -246,7 +246,7 @@ export function Statistics({ products, sales = [] }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales by Category Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4">Ventas por Categoría</h3>
           <div className="h-64 w-full">
             {stats.categoryData.length > 0 ? (
@@ -277,7 +277,7 @@ export function Statistics({ products, sales = [] }) {
         </div>
 
         {/* Profit Trend Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4">Análisis Financiero (Ventas)</h3>
           <div className="h-64 w-full">
              {stats.chartData.length > 0 ? (

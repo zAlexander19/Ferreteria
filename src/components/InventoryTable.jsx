@@ -124,7 +124,7 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Controls Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <button
@@ -135,7 +135,7 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
           Agregar Producto
         </button>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-grow md:flex-grow-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -172,9 +172,9 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-fade-in flex flex-col">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 {editingId ? <Pencil className="w-5 h-5 text-blue-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
                 {editingId ? 'Editar Producto' : 'Nuevo Producto'}
               </h2>
@@ -186,7 +186,7 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
               <div className="md:col-span-2 bg-blue-50 p-3 rounded-md border border-blue-100 mb-2">
                  <p className="text-sm text-blue-800">
                     <span className="font-semibold">Info:</span> {editingId ? `Editando producto: ${formData.id}` : `El ID del producto se generará automáticamente (ej. ${formData.category.substring(0,3).toUpperCase()}-001).`}
@@ -330,7 +330,7 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-[760px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Producto</th>

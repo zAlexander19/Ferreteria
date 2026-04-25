@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarClock, Plus, Search, Trash2, CheckCircle, Clock, X, ShoppingCart, User } from 'lucide-react';
 
-export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDeleteOrder, onCompleteOrderStock }) {
+export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDeleteOrder }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -89,19 +89,23 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
       createdAt: new Date().toISOString()
     };
 
-    onAddOrder(newOrder);
+    const result = onAddOrder(newOrder);
+    if (!result?.ok) {
+      alert(result?.message || 'No se pudo crear el pedido por falta de stock.');
+      return;
+    }
+
     setIsModalOpen(false);
   };
 
   const handleCompleteOrder = (order) => {
-    if (window.confirm(`¿Marcar el pedido de ${order.customerName} como completado? Esto descontará el stock de los productos.`)) {
-      onCompleteOrderStock(order.items);
+    if (window.confirm(`¿Marcar el pedido de ${order.customerName} como completado?`)) {
       onUpdateOrderStatus(order.id, 'Completado');
     }
   };
 
   return (
-    <div className="flex flex-col h-full gap-6">
+    <div className="flex flex-col h-full gap-4 sm:gap-6">
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <button
@@ -114,7 +118,7 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
       </div>
 
       {/* Orders List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {orders.length === 0 ? (
           <div className="col-span-full p-10 text-center text-gray-500 bg-white rounded-lg border border-gray-100 shadow-sm">
             <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -123,6 +127,21 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
         ) : (
           orders.map(order => (
             <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+              {(() => {
+                const isReleased = order.status === 'Cancelado' || order.stockReserved === false;
+                const stockLabel = isReleased ? 'Stock liberado' : 'Stock reservado';
+                const stockLabelClass = isReleased
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  : 'bg-amber-100 text-amber-800 border border-amber-200';
+
+                return (
+                  <div className="px-4 pt-3 pb-1">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${stockLabelClass}`}>
+                      {stockLabel}
+                    </span>
+                  </div>
+                );
+              })()}
               <div className={`px-4 py-3 border-b flex justify-between items-center ${
                 order.status === 'Completado' ? 'bg-green-50' : 
                 order.status === 'Cancelado' ? 'bg-red-50' : 'bg-blue-50'
@@ -205,8 +224,8 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 <CalendarClock className="w-5 h-5 text-blue-600" />
                 Crear Nuevo Pedido
               </h2>
@@ -217,7 +236,7 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
             
             <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
               {/* Form Side */}
-              <div className="w-full md:w-1/2 p-6 border-r border-gray-100 overflow-y-auto">
+              <div className="w-full md:w-1/2 p-4 sm:p-6 border-r border-gray-100 overflow-y-auto">
                 <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente</label>
@@ -240,7 +259,7 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Entrega</label>
                       <input
@@ -331,24 +350,24 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                 </div>
 
                 <div className="p-4 bg-white border-t border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                     <span className="font-bold text-gray-700">Total del Pedido:</span>
-                    <span className="text-xl font-bold text-blue-600">
+                    <span className="text-xl font-bold text-blue-600 break-all">
                       {calculateTotal().toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
                     </span>
                   </div>
-                  <div className="flex justify-end gap-3">
+                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
                     <button
                       form="order-form"
                       type="submit"
-                      className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700"
+                      className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700"
                     >
                       Guardar Pedido
                     </button>
