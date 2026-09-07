@@ -25,16 +25,6 @@ export function Statistics({ products, sales = [] }) {
 
   const stats = useMemo(() => {
     const now = new Date();
-    const lowStock = products.filter(p => p.stock < 5);
-    
-    // Vencimiento en próximos 30 días
-    const expiringSoon = products.filter(p => {
-      if (!p.expirationDate) return false;
-      const expDate = new Date(p.expirationDate);
-      const diffTime = expDate - now;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      return diffDays >= 0 && diffDays <= 30;
-    });
 
     // Best Sellers calculation for chart/list
     const sortedBySales = [...products].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0));
@@ -109,7 +99,7 @@ export function Statistics({ products, sales = [] }) {
         investment: Math.round(historyMap[date].investment)
       }));
 
-    return { lowStock, expiringSoon, bestSellers, lowRotation, categoryData, topProduct, worstProduct, totalInvestment, totalProfit, chartData, lowestStockProduct, stockChartData };
+    return { bestSellers, lowRotation, categoryData, topProduct, worstProduct, totalInvestment, totalProfit, chartData, lowestStockProduct, stockChartData };
   }, [products]);
 
   return (
