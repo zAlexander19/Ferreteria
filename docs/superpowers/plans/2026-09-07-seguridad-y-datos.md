@@ -19,7 +19,7 @@
 - Forma del payload: `{ products: [], orders: [], sales: [], productions: [] }` — exactamente esas cuatro claves.
 - Claves de `localStorage`: `masas_products`, `masas_orders`, `masas_sales`, `masas_productions` (no renombrar).
 - Categorías de producto: `["Freir", "Horno", "Sopaipillas"]` → prefijos de SKU `FRE`, `HOR`, `SOP`.
-- La contraseña nueva del usuario **debe ser distinta** de `masasladueña2026`, que quedó en el historial de git.
+- La contraseña nueva del usuario **debe ser distinta** de la contraseña anterior, la que estaba escrita en el código y quedó en el historial de git (no se transcribe en este documento).
 - No se migran datos: no hay datos que conservar.
 - Comandos de terminal: PowerShell en Windows. `&&` no encadena; usar `;` o comandos separados.
 
@@ -635,7 +635,7 @@ Expected: `relrowsecurity` = `true`.
 - [ ] **Step 3: Crear el usuario**
 
 En el panel: Authentication → Users → Add user → Create new user.
-Correo: el que use la dueña. Contraseña: **distinta** de `masasladueña2026`.
+Correo: el que use la dueña. Contraseña: **distinta** de la contraseña anterior (la que estaba en el código; no se transcribe acá).
 Marcar «Auto Confirm User» para evitar el circuito de confirmación por correo.
 
 Expected: el usuario aparece en la lista con estado confirmado.
@@ -878,7 +878,7 @@ Reemplazar `{AUTH_EMAIL}` por:
 
 - [ ] **Step 9: Verificar que no quedan rastros de las credenciales**
 
-Run: `grep -rn "AUTH_EMAIL\|AUTH_PASSWORD\|AUTH_SESSION_KEY\|masasladue" src/`
+Run: `grep -rn "AUTH_EMAIL\|AUTH_PASSWORD\|AUTH_SESSION_KEY" src/` y, aparte, buscar en `src/` la contraseña anterior (no se transcribe acá).
 Expected: sin resultados.
 
 - [ ] **Step 10: Verificar en el navegador**
@@ -1129,7 +1129,8 @@ git commit -m "chore: eliminar la vista Dashboard y los calculos de estadisticas
 ```bash
 cd "c:/Users/123/Desktop/ferreteria}"
 npm run build
-grep -rc "masasladue" dist/ || echo "SIN COINCIDENCIAS - correcto"
+# Reemplazar CONTRASENA_ANTERIOR por la contraseña que estaba en el código.
+grep -rc "CONTRASENA_ANTERIOR" dist/ || echo "SIN COINCIDENCIAS - correcto"
 ```
 
 Expected: `SIN COINCIDENCIAS - correcto`.

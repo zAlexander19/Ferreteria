@@ -82,3 +82,16 @@ Todo el estado se guarda como un único documento JSON por usuario, y cada
 guardado reemplaza el anterior. Con un solo dispositivo a la vez funciona
 bien; si se usa desde dos lugares al mismo tiempo, el último en guardar pisa
 al otro sin aviso. Resolverlo requiere separar en tablas por entidad.
+
+Ante un conflicto, **la nube siempre gana**: al iniciar sesión la aplicación
+lee la fila del usuario y, si tiene datos, adopta esa versión sin comparar
+`updated_at` ni mirar qué es más reciente. Sólo cuando la nube está vacía se
+conserva y se sube lo que haya en este navegador. La consecuencia práctica:
+si una subida falló —el indicador del encabezado quedó en «Error de
+sincronización»— y después se recarga la página o se vuelve a entrar, el
+trabajo local que no llegó a subir se pierde, reemplazado por la última
+versión que sí quedó en la nube. Por eso conviene no cerrar la pestaña ni
+recargar mientras el indicador esté en rojo: alcanza con esperar a que
+vuelva a decir «Nube sincronizada», que se reintenta con cada cambio. Es
+comportamiento heredado del diseño de una sola fila JSON, no algo que se
+haya introducido ahora.
