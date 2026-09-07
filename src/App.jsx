@@ -6,6 +6,7 @@ import { Orders } from './views/Orders';
 import { Production } from './views/Production';
 import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, ClipboardList, Mail, KeyRound, Menu, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
+import { applyProductEdit } from './lib/inventory';
 
 const AUTH_EMAIL = 'masas@gmail.com';
 const AUTH_PASSWORD = 'masasladueña2026';
@@ -161,7 +162,7 @@ function App() {
   };
 
   const handleEditProduct = (updatedProduct) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    setProducts(applyProductEdit(products, updatedProduct));
   };
 
   const handleDeleteProduct = (id) => {

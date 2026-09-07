@@ -10,3 +10,9 @@ export function generateSku(products, category) {
 
   return `${prefix}-${String(mayor + 1).padStart(3, '0')}`;
 }
+
+export function applyProductEdit(products, updatedProduct) {
+  return products.map(p =>
+    p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p
+  );
+}
