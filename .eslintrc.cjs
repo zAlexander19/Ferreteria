@@ -13,5 +13,7 @@ module.exports = {
   ignorePatterns: ['dist', 'node_modules', '.eslintrc.cjs'],
   rules: {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    // El proyecto no usa PropTypes; validarlas solo genera ruido.
+    'react/prop-types': 'off',
   },
 };

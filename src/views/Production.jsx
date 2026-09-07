@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Factory, Package, User, Layers3, PlusCircle, Trash2 } from 'lucide-react';
 
 const createEmptyLine = () => ({
@@ -51,7 +51,7 @@ export function Production({ products, productions = [], onRegisterProduction })
         previewUnits: units
       };
     });
-  }, [lines, products]);
+  }, [lines]);
 
   const totalPreviewUnits = useMemo(() => {
     return linePreview.reduce((acc, curr) => acc + curr.previewUnits, 0);

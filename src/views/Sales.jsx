@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle } from 'lucide-react';
 
 export function Sales({ products, onCompleteSale }) {

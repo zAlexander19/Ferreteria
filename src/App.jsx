@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { InventoryTable } from './components/InventoryTable';
 import { Sales } from './views/Sales';
 import { Statistics } from './views/Statistics';
@@ -409,23 +409,22 @@ function App() {
     setIsMobileNavOpen(false);
   };
 
+  // `cloudSyncState` solo toma cuatro valores: 'connecting', 'syncing',
+  // 'synced' y 'error'. La rama 'Sin conexión' quedó inalcanzable al eliminarse
+  // el modo local, así que 'error' es el caso final.
   const cloudSyncLabel = cloudSyncState === 'synced'
     ? 'Nube sincronizada'
     : cloudSyncState === 'syncing'
       ? 'Guardando en nube...'
       : cloudSyncState === 'connecting'
         ? 'Conectando a nube...'
-        : cloudSyncState === 'error'
-          ? 'Error de sincronización'
-          : 'Sin conexión';
+        : 'Error de sincronización';
 
   const cloudSyncClass = cloudSyncState === 'synced'
     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
     : cloudSyncState === 'syncing' || cloudSyncState === 'connecting'
       ? 'bg-amber-100 text-amber-800 border border-amber-200'
-      : cloudSyncState === 'error'
-        ? 'bg-red-100 text-red-800 border border-red-200'
-        : 'bg-slate-100 text-slate-700 border border-slate-200';
+      : 'bg-red-100 text-red-800 border border-red-200';
 
   if (!isSupabaseConfigured) {
     return (

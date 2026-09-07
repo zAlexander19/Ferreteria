@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarClock, Plus, Search, Trash2, CheckCircle, Clock, X, ShoppingCart, User } from 'lucide-react';
 
 export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDeleteOrder }) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { generateSku, normalizeProductFields } from '../lib/inventory';
