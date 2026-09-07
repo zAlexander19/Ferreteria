@@ -8,7 +8,17 @@ Ejecutar este SQL en el SQL Editor. Las políticas son obligatorias: sin ellas
 la `anon key` —que viaja en el código del navegador— deja leer y escribir la
 tabla entera a cualquiera.
 
+> **Atención:** la primera línea borra la tabla `app_state` que exista de una
+> configuración anterior, **con todos sus datos**. Es a propósito: el esquema
+> viejo usaba `id int` y el nuevo se apoya en `user_id uuid`. Sin ese `drop`,
+> el `create table` falla con «relation already exists» y —como el editor SQL
+> corre el bloque entero en una sola transacción— también abortan el
+> `enable row level security` y las tres políticas, dejando la tabla vieja
+> viva y sin RLS. Si hubiera datos que rescatar, exportarlos antes.
+
 ```sql
+drop table if exists app_state;
+
 create table app_state (
   user_id    uuid primary key references auth.users(id) on delete cascade,
   payload    jsonb not null default '{}'::jsonb,
