@@ -16,3 +16,13 @@ export function applyProductEdit(products, updatedProduct) {
     p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p
   );
 }
+
+export function normalizeProductFields(formData) {
+  return {
+    ...formData,
+    stock: Number(formData.stock) || 0,
+    minStock: Number(formData.minStock) || 5,
+    price: Number(formData.price) || 0,
+    cost: Number(formData.cost) || 0,
+  };
+}

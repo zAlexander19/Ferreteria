@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
-import { generateSku } from '../lib/inventory';
+import { generateSku, normalizeProductFields } from '../lib/inventory';
 
 const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
 
@@ -74,31 +74,12 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
       ? `Paquete Masas Sopaipillas ${formData.centimetros}cm${packageText}${cocktailText}`
       : `Paquete Masas ${formData.category} ${formData.centimetros}cm${packageText}${cocktailText}`;
 
-    if (editingId) {
-      // Editar producto existente
-      const updatedProduct = {
-        ...formData,
-        name: generatedName,
-        stock: Number(formData.stock),
-        minStock: Number(formData.minStock) || 5, // Default warning at 5
-        price: Number(formData.price),
-        cost: Number(formData.cost)
-      };
-      onEditProduct(updatedProduct);
-    } else {
-      // Agregar nuevo producto
-      // Generar ID automático
-      const generatedId = generateSku(products, formData.category);
+    const base = normalizeProductFields({ ...formData, name: generatedName });
 
-      const newProduct = {
-        ...formData,
-        id: generatedId,
-        name: generatedName,
-        stock: Number(formData.stock),
-        minStock: Number(formData.minStock) || 5, // Default warning at 5
-        price: Number(formData.price)
-      };
-      onAddProduct(newProduct);
+    if (editingId) {
+      onEditProduct(base);
+    } else {
+      onAddProduct({ ...base, id: generateSku(products, formData.category) });
     }
     
     setIsModalOpen(false);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSku, applyProductEdit } from './inventory';
+import { generateSku, applyProductEdit, normalizeProductFields } from './inventory';
 
 describe('generateSku', () => {
   it('arranca en 001 cuando no hay productos de esa categoria', () => {
@@ -56,5 +56,44 @@ describe('applyProductEdit', () => {
     const resultado = applyProductEdit(products, { id: 'FRE-001', price: 150 });
 
     expect(resultado[1]).toEqual({ id: 'SOP-001', price: 200 });
+  });
+});
+
+describe('normalizeProductFields', () => {
+  it('convierte a numero los cuatro campos numericos', () => {
+    const resultado = normalizeProductFields({
+      centimetros: '12',
+      stock: '500',
+      minStock: '50',
+      price: '3500',
+      cost: '1800',
+    });
+
+    expect(resultado.stock).toBe(500);
+    expect(resultado.minStock).toBe(50);
+    expect(resultado.price).toBe(3500);
+    expect(resultado.cost).toBe(1800);
+  });
+
+  it('usa 5 como minimo por defecto y 0 para el resto', () => {
+    const resultado = normalizeProductFields({ stock: '', minStock: '', price: '', cost: '' });
+
+    expect(resultado.minStock).toBe(5);
+    expect(resultado.stock).toBe(0);
+    expect(resultado.price).toBe(0);
+    expect(resultado.cost).toBe(0);
+  });
+
+  it('conserva los campos no numericos', () => {
+    const resultado = normalizeProductFields({
+      category: 'Freir',
+      isCocktail: true,
+      unitsPerPackage: '10',
+      stock: '1', minStock: '1', price: '1', cost: '1',
+    });
+
+    expect(resultado.category).toBe('Freir');
+    expect(resultado.isCocktail).toBe(true);
+    expect(resultado.unitsPerPackage).toBe('10');
   });
 });
