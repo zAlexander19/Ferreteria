@@ -85,11 +85,18 @@ function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Identificador estable del usuario. `onAuthStateChange` entrega un objeto de
+  // sesion NUEVO en cada evento (INITIAL_SESSION, TOKEN_REFRESHED y, sobre todo,
+  // el SIGNED_IN que auth-js emite cada vez que la pestana vuelve a ser visible).
+  // Depender del objeto `session` hacia que esos eventos re-dispararan la
+  // hidratacion y cancelaran la subida pendiente, perdiendo el ultimo cambio.
+  // El id de usuario solo cambia cuando cambia de verdad la sesion.
+  const userId = session?.user?.id ?? null;
+
   useEffect(() => {
-    if (!session || !supabase) return;
+    if (!userId || !supabase) return;
 
     let mounted = true;
-    const userId = session.user.id;
 
     setIsDataHydrated(false);
     setCloudSyncState('connecting');
@@ -132,10 +139,14 @@ function App() {
     return () => {
       mounted = false;
     };
-  }, [session]);
+    // Solo `userId`: el estado local (products/orders/sales/productions) se lee
+    // aca como foto del momento de la hidratacion, no como disparador. Incluirlo
+    // en las dependencias volveria a hidratar desde la nube ante cada cambio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
-    if (!isDataHydrated || !session || !supabase) return;
+    if (!isDataHydrated || !userId || !supabase) return;
 
     const timeoutId = setTimeout(async () => {
       setCloudSyncState('syncing');
@@ -144,7 +155,7 @@ function App() {
         .from(CLOUD_TABLE_NAME)
         .upsert(
           {
-            user_id: session.user.id,
+            user_id: userId,
             payload: { products, orders, sales, productions },
             updated_at: new Date().toISOString()
           },
@@ -161,7 +172,7 @@ function App() {
     }, 450);
 
     return () => clearTimeout(timeoutId);
-  }, [products, orders, sales, productions, isDataHydrated, session]);
+  }, [products, orders, sales, productions, isDataHydrated, userId]);
 
   const handleAddProduct = (newProduct) => {
     setProducts([...products, newProduct]);
