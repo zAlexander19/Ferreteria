@@ -5,10 +5,32 @@ import { Statistics } from './views/Statistics';
 import { Orders } from './views/Orders';
 import { Production } from './views/Production';
 import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, ClipboardList, Mail, KeyRound, Menu, X } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
 const AUTH_EMAIL = 'masas@gmail.com';
 const AUTH_PASSWORD = 'masasladueña2026';
 const AUTH_SESSION_KEY = 'masas_auth_session';
+const CLOUD_TABLE_NAME = 'app_state';
+const CLOUD_ROW_ID = 1;
+
+const STORAGE_KEYS = {
+  products: 'masas_products',
+  orders: 'masas_orders',
+  sales: 'masas_sales',
+  productions: 'masas_productions'
+};
+
+function readLocalArray(key) {
+  const rawValue = localStorage.getItem(key);
+  if (!rawValue) return [];
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -16,56 +38,123 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem(AUTH_SESSION_KEY) === '1');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [isDataHydrated, setIsDataHydrated] = useState(false);
+  const [cloudSyncState, setCloudSyncState] = useState(isSupabaseConfigured ? 'connecting' : 'local-only');
   
   // Inicializar estado desde LocalStorage si existe, si no, usar datos por defecto
-  const [products, setProducts] = useState(() => {
-    const savedProducts = localStorage.getItem('masas_products');
-    if (savedProducts) {
-      return JSON.parse(savedProducts);
-    }
-    return [];
-  });
+  const [products, setProducts] = useState(() => readLocalArray(STORAGE_KEYS.products));
 
   // Guardar en LocalStorage cada vez que cambien los productos
   useEffect(() => {
-    localStorage.setItem('masas_products', JSON.stringify(products));
+    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
   }, [products]);
 
-  const [orders, setOrders] = useState(() => {
-    const savedOrders = localStorage.getItem('masas_orders');
-    if (savedOrders) {
-      return JSON.parse(savedOrders);
-    }
-    return [];
-  });
+  const [orders, setOrders] = useState(() => readLocalArray(STORAGE_KEYS.orders));
 
   useEffect(() => {
-    localStorage.setItem('masas_orders', JSON.stringify(orders));
+    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
   }, [orders]);
 
-  const [sales, setSales] = useState(() => {
-    const savedSales = localStorage.getItem('masas_sales');
-    if (savedSales) {
-      return JSON.parse(savedSales);
-    }
-    return [];
-  });
+  const [sales, setSales] = useState(() => readLocalArray(STORAGE_KEYS.sales));
 
   useEffect(() => {
-    localStorage.setItem('masas_sales', JSON.stringify(sales));
+    localStorage.setItem(STORAGE_KEYS.sales, JSON.stringify(sales));
   }, [sales]);
 
-  const [productions, setProductions] = useState(() => {
-    const savedProductions = localStorage.getItem('masas_productions');
-    if (savedProductions) {
-      return JSON.parse(savedProductions);
-    }
-    return [];
-  });
+  const [productions, setProductions] = useState(() => readLocalArray(STORAGE_KEYS.productions));
 
   useEffect(() => {
-    localStorage.setItem('masas_productions', JSON.stringify(productions));
+    localStorage.setItem(STORAGE_KEYS.productions, JSON.stringify(productions));
   }, [productions]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateFromCloud = async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        setCloudSyncState('local-only');
+        setIsDataHydrated(true);
+        return;
+      }
+
+      setCloudSyncState('connecting');
+
+      const { data, error } = await supabase
+        .from(CLOUD_TABLE_NAME)
+        .select('payload')
+        .eq('id', CLOUD_ROW_ID)
+        .maybeSingle();
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error('Error al cargar datos desde Supabase:', error.message);
+        setCloudSyncState('error');
+        setIsDataHydrated(true);
+        return;
+      }
+
+      if (data?.payload) {
+        const payload = data.payload;
+        setProducts(Array.isArray(payload.products) ? payload.products : []);
+        setOrders(Array.isArray(payload.orders) ? payload.orders : []);
+        setSales(Array.isArray(payload.sales) ? payload.sales : []);
+        setProductions(Array.isArray(payload.productions) ? payload.productions : []);
+      } else {
+        const bootstrapPayload = { products, orders, sales, productions };
+        const { error: bootstrapError } = await supabase
+          .from(CLOUD_TABLE_NAME)
+          .upsert(
+            { id: CLOUD_ROW_ID, payload: bootstrapPayload },
+            { onConflict: 'id' }
+          );
+
+        if (bootstrapError) {
+          console.error('Error al inicializar datos en Supabase:', bootstrapError.message);
+          setCloudSyncState('error');
+          setIsDataHydrated(true);
+          return;
+        }
+      }
+
+      setCloudSyncState('synced');
+      setIsDataHydrated(true);
+    };
+
+    hydrateFromCloud();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isDataHydrated || !isSupabaseConfigured || !supabase) return;
+
+    const timeoutId = setTimeout(async () => {
+      setCloudSyncState('syncing');
+
+      const { error } = await supabase
+        .from(CLOUD_TABLE_NAME)
+        .upsert(
+          {
+            id: CLOUD_ROW_ID,
+            payload: { products, orders, sales, productions }
+          },
+          { onConflict: 'id' }
+        );
+
+      if (error) {
+        console.error('Error al sincronizar con Supabase:', error.message);
+        setCloudSyncState('error');
+        return;
+      }
+
+      setCloudSyncState('synced');
+    }, 450);
+
+    return () => clearTimeout(timeoutId);
+  }, [products, orders, sales, productions, isDataHydrated]);
 
   const handleAddProduct = (newProduct) => {
     setProducts([...products, newProduct]);
@@ -282,6 +371,24 @@ function App() {
     setIsMobileNavOpen(false);
   };
 
+  const cloudSyncLabel = cloudSyncState === 'synced'
+    ? 'Nube sincronizada'
+    : cloudSyncState === 'syncing'
+      ? 'Guardando en nube...'
+      : cloudSyncState === 'connecting'
+        ? 'Conectando a nube...'
+        : cloudSyncState === 'error'
+          ? 'Error de sincronización'
+          : 'Modo local';
+
+  const cloudSyncClass = cloudSyncState === 'synced'
+    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    : cloudSyncState === 'syncing' || cloudSyncState === 'connecting'
+      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+      : cloudSyncState === 'error'
+        ? 'bg-red-100 text-red-800 border border-red-200'
+        : 'bg-slate-100 text-slate-700 border border-slate-200';
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 flex items-center justify-center p-4">
@@ -473,6 +580,9 @@ function App() {
             </h2>
            </div>
            <div className="flex items-center gap-4">
+             <span className={`hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cloudSyncClass}`}>
+               {cloudSyncLabel}
+             </span>
              <div className="text-right hidden sm:block">
                <div className="text-sm font-medium text-gray-900">{AUTH_EMAIL}</div>
                <div className="text-xs text-gray-500">Dueña</div>
