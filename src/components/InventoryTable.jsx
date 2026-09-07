@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
+import { generateSku } from '../lib/inventory';
 
 const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
 
@@ -87,11 +88,7 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
     } else {
       // Agregar nuevo producto
       // Generar ID automático
-      const prefix = formData.category.substring(0, 3).toUpperCase();
-      const count = products.filter(p => p.category === formData.category).length + 1;
-      // Opcional: Rellenar con ceros para mantener formato (ej. HER-005)
-      const paddedCount = count.toString().padStart(3, '0'); 
-      const generatedId = `${prefix}-${paddedCount}`;
+      const generatedId = generateSku(products, formData.category);
 
       const newProduct = {
         ...formData,
