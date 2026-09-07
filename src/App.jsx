@@ -370,6 +370,23 @@ function App() {
 
   const handleLogout = async () => {
     if (!window.confirm('¿Cerrar sesión?')) return;
+
+    // Vaciar el estado local ANTES de cerrar sesión, y en este orden:
+    // primero isDataHydrated en false (la guarda del efecto de sync es
+    // `if (!isDataHydrated || !session || !supabase) return;`), y recién
+    // después las cuatro listas. Así, aunque estas actualizaciones no se
+    // agrupen en un mismo render, el efecto de sincronización nunca llega a
+    // ver "isDataHydrated === true" al mismo tiempo que listas vacías, y por
+    // lo tanto nunca programa una subida con datos vacíos. Vaciar las listas
+    // también dispara los cuatro efectos de persistencia local existentes,
+    // que escriben '[]' en localStorage, dejando limpio el almacenamiento
+    // local para la próxima sesión que inicie en este navegador.
+    setIsDataHydrated(false);
+    setProducts([]);
+    setOrders([]);
+    setSales([]);
+    setProductions([]);
+
     await supabase.auth.signOut();
     setIsMobileNavOpen(false);
     setLoginForm({ email: '', password: '' });
