@@ -8,9 +8,6 @@ import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, Cl
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { applyProductEdit } from './lib/inventory';
 
-const AUTH_EMAIL = 'masas@gmail.com';
-const AUTH_PASSWORD = 'masasladueña2026';
-const AUTH_SESSION_KEY = 'masas_auth_session';
 const CLOUD_TABLE_NAME = 'app_state';
 const CLOUD_ROW_ID = 1;
 
@@ -36,11 +33,13 @@ function readLocalArray(key) {
 function App() {
   const [activeTab, setActiveTab] = useState('inventory');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem(AUTH_SESSION_KEY) === '1');
+  const [session, setSession] = useState(null);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isDataHydrated, setIsDataHydrated] = useState(false);
-  const [cloudSyncState, setCloudSyncState] = useState(isSupabaseConfigured ? 'connecting' : 'local-only');
+  const [cloudSyncState, setCloudSyncState] = useState('connecting');
   
   // Inicializar estado desde LocalStorage si existe, si no, usar datos por defecto
   const [products, setProducts] = useState(() => readLocalArray(STORAGE_KEYS.products));
@@ -67,6 +66,24 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.productions, JSON.stringify(productions));
   }, [productions]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      setIsAuthChecked(true);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null);
+      setIsAuthChecked(true);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -342,26 +359,29 @@ function App() {
     setLoginForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError('');
 
-    const email = loginForm.email.trim().toLowerCase();
-    const password = loginForm.password;
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email.trim(),
+      password: loginForm.password
+    });
 
-    if (email === AUTH_EMAIL && password === AUTH_PASSWORD) {
-      sessionStorage.setItem(AUTH_SESSION_KEY, '1');
-      setIsAuthenticated(true);
-      setLoginError('');
+    setIsLoggingIn(false);
+
+    if (error) {
+      setLoginError('Credenciales incorrectas. Intenta nuevamente.');
       return;
     }
 
-    setLoginError('Credenciales incorrectas. Intenta nuevamente.');
+    setLoginForm({ email: '', password: '' });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!window.confirm('¿Cerrar sesión?')) return;
-    sessionStorage.removeItem(AUTH_SESSION_KEY);
-    setIsAuthenticated(false);
+    await supabase.auth.signOut();
     setIsMobileNavOpen(false);
     setLoginForm({ email: '', password: '' });
     setLoginError('');
@@ -390,7 +410,29 @@ function App() {
         ? 'bg-red-100 text-red-800 border border-red-200'
         : 'bg-slate-100 text-slate-700 border border-slate-200';
 
-  if (!isAuthenticated) {
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Falta configuración</h1>
+          <p className="text-sm text-gray-600">
+            No están definidas las variables <code>VITE_SUPABASE_URL</code> y{' '}
+            <code>VITE_SUPABASE_ANON_KEY</code>. Ver <code>SUPABASE_SETUP.md</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthChecked) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <p className="text-gray-500">Cargando...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8">
@@ -447,9 +489,10 @@ function App() {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-colors"
+              disabled={isLoggingIn}
+              className="w-full py-2.5 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300"
             >
-              Iniciar sesion
+              {isLoggingIn ? 'Entrando...' : 'Iniciar sesion'}
             </button>
           </form>
         </div>
@@ -585,7 +628,7 @@ function App() {
                {cloudSyncLabel}
              </span>
              <div className="text-right hidden sm:block">
-               <div className="text-sm font-medium text-gray-900">{AUTH_EMAIL}</div>
+               <div className="text-sm font-medium text-gray-900">{session.user.email}</div>
                <div className="text-xs text-gray-500">Dueña</div>
              </div>
                <div className="h-9 w-9 sm:h-10 sm:w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold border border-blue-200">
