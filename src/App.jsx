@@ -7,9 +7,9 @@ import { Production } from './views/Production';
 import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, ClipboardList, Mail, KeyRound, Menu, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { applyProductEdit } from './lib/inventory';
+import { decidirOrigen } from './lib/syncPayload';
 
 const CLOUD_TABLE_NAME = 'app_state';
-const CLOUD_ROW_ID = 1;
 
 const STORAGE_KEYS = {
   products: 'masas_products',
@@ -86,53 +86,41 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!session || !supabase) return;
+
     let mounted = true;
+    const userId = session.user.id;
+
+    setIsDataHydrated(false);
+    setCloudSyncState('connecting');
 
     const hydrateFromCloud = async () => {
-      if (!isSupabaseConfigured || !supabase) {
-        setCloudSyncState('local-only');
-        setIsDataHydrated(true);
-        return;
-      }
-
-      setCloudSyncState('connecting');
-
       const { data, error } = await supabase
         .from(CLOUD_TABLE_NAME)
         .select('payload')
-        .eq('id', CLOUD_ROW_ID)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (!mounted) return;
 
       if (error) {
+        // Deliberado: NO se marca la hidratacion como terminada. Si no pudimos
+        // leer la nube, no sabemos que hay en ella, y dejar que el efecto de
+        // subida se dispare la sobrescribiria con lo local. La app sigue usable
+        // contra localStorage; el sync se reintenta al recargar.
         console.error('Error al cargar datos desde Supabase:', error.message);
         setCloudSyncState('error');
-        setIsDataHydrated(true);
         return;
       }
 
-      if (data?.payload) {
-        const payload = data.payload;
+      const estadoLocal = { products, orders, sales, productions };
+
+      if (decidirOrigen(data?.payload, estadoLocal) === 'nube') {
+        const payload = data?.payload ?? {};
         setProducts(Array.isArray(payload.products) ? payload.products : []);
         setOrders(Array.isArray(payload.orders) ? payload.orders : []);
         setSales(Array.isArray(payload.sales) ? payload.sales : []);
         setProductions(Array.isArray(payload.productions) ? payload.productions : []);
-      } else {
-        const bootstrapPayload = { products, orders, sales, productions };
-        const { error: bootstrapError } = await supabase
-          .from(CLOUD_TABLE_NAME)
-          .upsert(
-            { id: CLOUD_ROW_ID, payload: bootstrapPayload },
-            { onConflict: 'id' }
-          );
-
-        if (bootstrapError) {
-          console.error('Error al inicializar datos en Supabase:', bootstrapError.message);
-          setCloudSyncState('error');
-          setIsDataHydrated(true);
-          return;
-        }
       }
 
       setCloudSyncState('synced');
@@ -144,10 +132,10 @@ function App() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session]);
 
   useEffect(() => {
-    if (!isDataHydrated || !isSupabaseConfigured || !supabase) return;
+    if (!isDataHydrated || !session || !supabase) return;
 
     const timeoutId = setTimeout(async () => {
       setCloudSyncState('syncing');
@@ -156,10 +144,11 @@ function App() {
         .from(CLOUD_TABLE_NAME)
         .upsert(
           {
-            id: CLOUD_ROW_ID,
-            payload: { products, orders, sales, productions }
+            user_id: session.user.id,
+            payload: { products, orders, sales, productions },
+            updated_at: new Date().toISOString()
           },
-          { onConflict: 'id' }
+          { onConflict: 'user_id' }
         );
 
       if (error) {
@@ -172,7 +161,7 @@ function App() {
     }, 450);
 
     return () => clearTimeout(timeoutId);
-  }, [products, orders, sales, productions, isDataHydrated]);
+  }, [products, orders, sales, productions, isDataHydrated, session]);
 
   const handleAddProduct = (newProduct) => {
     setProducts([...products, newProduct]);
@@ -400,7 +389,7 @@ function App() {
         ? 'Conectando a nube...'
         : cloudSyncState === 'error'
           ? 'Error de sincronización'
-          : 'Modo local';
+          : 'Sin conexión';
 
   const cloudSyncClass = cloudSyncState === 'synced'
     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
