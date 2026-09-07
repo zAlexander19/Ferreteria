@@ -43,7 +43,19 @@ vez que guarda.
 
 ## 3) Crear el usuario
 Authentication → Users → Add user. Marcar «Auto Confirm User».
-La aplicación no tiene pantalla de registro: los usuarios se crean solo acá.
+La aplicación no tiene pantalla de registro, así que dentro de la app no hay
+manera de darse de alta.
+
+## 3 bis) Cerrar el registro público
+Eso último vale para la aplicación, no para el proyecto de Supabase: la
+`anon key` viaja en el código del navegador y habilita igual el endpoint de
+alta, así que cualquiera que tenga la URL puede crearse una cuenta. Los datos
+del negocio no se filtran —las políticas RLS solo dejan ver la fila propia—
+pero es consumo de cuota ajeno y conviene cerrarlo.
+
+Authentication → Providers → Email → desactivar «Allow new users to sign up»
+y guardar. Hacerlo **después** de crear el usuario del paso 3; el alta desde
+el panel sigue funcionando con el registro público desactivado.
 
 ## 4) Variables de entorno
 Copiar `.env.example` a `.env` y completar con los valores de
