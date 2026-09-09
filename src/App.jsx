@@ -148,9 +148,14 @@ function App() {
   useEffect(() => {
     if (!isDataHydrated || !userId || !supabase) return;
 
-    const timeoutId = setTimeout(async () => {
-      setCloudSyncState('syncing');
+    // 'syncing' se marca al ARMAR el debounce, no adentro del setTimeout.
+    // Durante esos 450 ms hay cambios que todavía no salieron, y
+    // `cloudSyncState` es justamente lo que mira handleLogout para decidir si
+    // puede vaciar el estado local. Si el indicador siguiera en 'synced'
+    // durante la espera, cerrar sesión ahí borraría un cambio no subido.
+    setCloudSyncState('syncing');
 
+    const timeoutId = setTimeout(async () => {
       const { error } = await supabase
         .from(CLOUD_TABLE_NAME)
         .upsert(
@@ -391,23 +396,28 @@ function App() {
       ? '¿Cerrar sesión?'
       : 'Hay cambios que todavía no se sincronizaron con la nube.\n\n' +
         'Si cerrás sesión ahora, esos cambios se conservan en este navegador ' +
-        'pero no quedan subidos. Conviene esperar a que el indicador diga ' +
-        '«Nube sincronizada».\n\n¿Cerrar sesión igual?';
+        'pero no quedan subidos, y la próxima vez que entres, si la nube tiene ' +
+        'datos, se van a reemplazar por lo que haya en la nube. Conviene ' +
+        'esperar a que el indicador diga «Nube sincronizada».\n\n' +
+        '¿Cerrar sesión igual?';
 
     if (!window.confirm(mensaje)) return;
 
+    // Siempre en false, se limpie o no: la guarda del efecto de sync es
+    // `if (!isDataHydrated || !userId || !supabase) return;`, así que bajarla
+    // acá garantiza que ninguna subida quede programada mientras se cierra la
+    // sesión, y que el próximo inicio no encuentre la bandera en true antes de
+    // que la hidratación haya decidido nada.
+    setIsDataHydrated(false);
+
     if (estaEnLaNube) {
-      // Vaciar el estado local ANTES de cerrar sesión, y en este orden:
-      // primero isDataHydrated en false (la guarda del efecto de sync es
-      // `if (!isDataHydrated || !userId || !supabase) return;`), y recién
-      // después las cuatro listas. Así, aunque estas actualizaciones no se
-      // agrupen en un mismo render, el efecto de sincronización nunca llega a
+      // Vaciar el estado local ANTES de cerrar sesión. Como isDataHydrated ya
+      // quedó en false más arriba, el efecto de sincronización nunca llega a
       // ver "isDataHydrated === true" al mismo tiempo que listas vacías, y por
       // lo tanto nunca programa una subida con datos vacíos. Vaciar las listas
       // también dispara los cuatro efectos de persistencia local existentes,
       // que escriben '[]' en localStorage, dejando limpio el almacenamiento
       // local para la próxima sesión que inicie en este navegador.
-      setIsDataHydrated(false);
       setProducts([]);
       setOrders([]);
       setSales([]);
