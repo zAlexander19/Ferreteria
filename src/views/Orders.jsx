@@ -1,29 +1,55 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CalendarClock, Plus, Search, Trash2, CheckCircle, Clock, X, ShoppingCart, User, AlertTriangle } from 'lucide-react';
+import { CalendarClock, Plus, Search, Trash2, X, ShoppingCart, Pencil, Filter } from 'lucide-react';
 import { faltantesPorProducto } from '../lib/inventory';
+import { unidadesDeItem, unidadesTotales } from '../lib/pedidos';
+import { OrderCard } from './OrderCard';
 
-export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDeleteOrder }) {
+const ESTADOS_PAGO = ['Sin pagar', 'Abonado', 'Pagado'];
+
+const FORM_VACIO = {
+  customerName: '',
+  deliveryDate: '',
+  deliveryTime: '',
+  phone: '',
+  paymentStatus: 'Sin pagar',
+  paidAmount: ''
+};
+
+const clp = valor => (Number(valor) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
+
+export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrderStatus, onDeleteOrder }) {
   const faltantes = useMemo(() => faltantesPorProducto(products), [products]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  
-  const [formData, setFormData] = useState({
-    customerName: '',
-    deliveryDate: '',
-    deliveryTime: '',
-    phone: ''
-  });
-  
+  const [formData, setFormData] = useState(FORM_VACIO);
   const [cart, setCart] = useState([]);
+
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+
+  // Las fechas se guardan como 'YYYY-MM-DD', así que comparar como texto
+  // ordena igual que comparar como fecha, sin líos de zona horaria.
+  const pedidosFiltrados = useMemo(() => {
+    return orders.filter(order => {
+      const fecha = order.deliveryDate || '';
+      if (desde && (!fecha || fecha < desde)) return false;
+      if (hasta && (!fecha || fecha > hasta)) return false;
+      return true;
+    });
+  }, [orders, desde, hasta]);
+
+  const hayFiltro = Boolean(desde || hasta);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setSearchResults([]);
       return;
     }
-    const results = products.filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const results = products.filter(p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setSearchResults(results);
@@ -35,20 +61,32 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
   };
 
   const openAddModal = () => {
-    setFormData({
-      customerName: '',
-      deliveryDate: '',
-      deliveryTime: '',
-      phone: ''
-    });
+    setEditingId(null);
+    setFormData(FORM_VACIO);
     setCart([]);
+    setSearchTerm('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (order) => {
+    setEditingId(order.id);
+    setFormData({
+      customerName: order.customerName || '',
+      deliveryDate: order.deliveryDate || '',
+      deliveryTime: order.deliveryTime || '',
+      phone: order.phone || '',
+      paymentStatus: order.paymentStatus || 'Sin pagar',
+      paidAmount: order.paidAmount ?? ''
+    });
+    setCart(order.items.map(item => ({ ...item })));
+    setSearchTerm('');
     setIsModalOpen(true);
   };
 
   const addToCart = (product) => {
     const existingItem = cart.find(item => item.id === product.id);
     if (existingItem) {
-      setCart(cart.map(item => 
+      setCart(cart.map(item =>
         item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
@@ -62,7 +100,7 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
       setCart(cart.filter(item => item.id !== productId));
       return;
     }
-    setCart(cart.map(item => 
+    setCart(cart.map(item =>
       item.id === productId ? { ...item, quantity: newQuantity } : item
     ));
   };
@@ -71,211 +109,154 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
     setCart(cart.filter(item => item.id !== productId));
   };
 
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const calculateTotal = () => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const avisarFaltantes = (result) => {
+    if (result.faltantes?.length > 0) {
+      const detalle = result.faltantes
+        .map(f => `${f.unitsShort} unidades de ${f.name}`)
+        .join('\n');
+      alert(`Pedido ${editingId ? 'actualizado' : 'agendado'}.\n\nFalta producir:\n${detalle}`);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (cart.length === 0) {
-      alert("Debes agregar al menos un producto al pedido");
+      alert('Debes agregar al menos un producto al pedido');
       return;
     }
 
-    const newOrder = {
-      id: `PED-${Date.now().toString().slice(-6)}`,
-      ...formData,
-      items: cart,
-      total: calculateTotal(),
-      status: 'Pendiente', // Pendiente, Completado, Cancelado
-      createdAt: new Date().toISOString()
+    const datosPago = {
+      paymentStatus: formData.paymentStatus,
+      paidAmount: formData.paymentStatus === 'Abonado' ? (Number(formData.paidAmount) || 0) : 0
     };
 
-    const result = onAddOrder(newOrder);
-    if (!result?.ok) {
-      alert(result?.message || 'No se pudo crear el pedido.');
-      return;
-    }
-
-    // El pedido se agenda igual sin stock; el aviso es informativo para que
-    // sepa en el momento qué le falta producir.
-    if (result.faltantes?.length > 0) {
-      const detalle = result.faltantes
-        .map(f => `${f.unitsShort} unidades de ${f.name}`)
-        .join('\n');
-      alert(`Pedido agendado.\n\nFalta producir:\n${detalle}`);
+    if (editingId) {
+      const result = onEditOrder({
+        ...formData,
+        ...datosPago,
+        id: editingId,
+        items: cart,
+        total: calculateTotal()
+      });
+      if (!result?.ok) {
+        alert(result?.message || 'No se pudo actualizar el pedido.');
+        return;
+      }
+      avisarFaltantes(result);
+    } else {
+      const result = onAddOrder({
+        id: `PED-${Date.now().toString().slice(-6)}`,
+        ...formData,
+        ...datosPago,
+        items: cart,
+        total: calculateTotal(),
+        status: 'Pendiente',
+        createdAt: new Date().toISOString()
+      });
+      if (!result?.ok) {
+        alert(result?.message || 'No se pudo crear el pedido.');
+        return;
+      }
+      avisarFaltantes(result);
     }
 
     setIsModalOpen(false);
   };
 
-  const handleCompleteOrder = (order) => {
-    if (window.confirm(`¿Marcar el pedido de ${order.customerName} como completado?`)) {
-      onUpdateOrderStatus(order.id, 'Completado');
-    }
-  };
-
   return (
     <div className="flex flex-col h-full gap-4 sm:gap-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      {/* Controles */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
         >
           <Plus className="w-5 h-5" />
           Nuevo Pedido
         </button>
+
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 w-full lg:w-auto">
+          <div className="flex items-center gap-2 text-sm text-gray-600 sm:hidden">
+            <Filter className="w-4 h-4" /> Filtrar por fecha de entrega
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+            <input
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+            <input
+              type="date"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          {hayFiltro && (
+            <button
+              onClick={() => { setDesde(''); setHasta(''); }}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+            >
+              Limpiar filtro
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Orders List */}
+      {hayFiltro && (
+        <div className="text-sm text-gray-600 -mt-2">
+          Mostrando <span className="font-semibold">{pedidosFiltrados.length}</span> de {orders.length} pedidos
+        </div>
+      )}
+
+      {/* Lista */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-        {orders.length === 0 ? (
+        {pedidosFiltrados.length === 0 ? (
           <div className="col-span-full p-10 text-center text-gray-500 bg-white rounded-lg border border-gray-100 shadow-sm">
             <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg">No hay pedidos registrados</p>
+            <p className="text-lg">
+              {orders.length === 0
+                ? 'No hay pedidos registrados'
+                : 'No hay pedidos para esas fechas'}
+            </p>
           </div>
         ) : (
-          orders.map(order => (
-            <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-              {(() => {
-                const isReleased = order.status === 'Cancelado' || order.stockReserved === false;
-                const stockLabel = isReleased ? 'Stock liberado' : 'Stock reservado';
-                const stockLabelClass = isReleased
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  : 'bg-amber-100 text-amber-800 border border-amber-200';
-
-                // Faltante en vivo contra el stock de hoy: si el pedido sigue
-                // pendiente y alguno de sus productos está en negativo, todavía
-                // hay que producirlo. Al registrar producción se apaga solo.
-                const faltantesDelPedido = isReleased
-                  ? []
-                  : faltantes.filter(f => order.items.some(item => item.id === f.id));
-
-                return (
-                  <div className="px-4 pt-3 pb-1 flex flex-wrap gap-2">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${stockLabelClass}`}>
-                      {stockLabel}
-                    </span>
-                    {faltantesDelPedido.length > 0 && (
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200"
-                        title={faltantesDelPedido.map(f => `${f.unitsShort} unidades de ${f.name}`).join('\n')}
-                      >
-                        <AlertTriangle className="w-3 h-3" />
-                        Falta producir
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-              <div className={`px-4 py-3 border-b flex justify-between items-center ${
-                order.status === 'Completado' ? 'bg-green-50' : 
-                order.status === 'Cancelado' ? 'bg-red-50' : 'bg-blue-50'
-              }`}>
-                <div className="font-bold text-gray-800">{order.id}</div>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                  order.status === 'Completado' ? 'bg-green-200 text-green-800' :
-                  order.status === 'Cancelado' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'
-                }`}>
-                  {order.status}
-                </span>
-              </div>
-              <div className="p-4 flex-1">
-                <div className="flex items-center gap-2 text-gray-700 mb-2 font-medium">
-                  <User className="w-4 h-4 text-gray-400" />
-                  {order.customerName} {order.phone && `- ${order.phone}`}
-                </div>
-                <div className="flex items-center gap-2 text-gray-600 mb-1 text-sm">
-                  <CalendarClock className="w-4 h-4 text-gray-400" />
-                  Fecha: {order.deliveryDate || 'No especificada'}
-                </div>
-                <div className="flex items-center gap-2 text-gray-600 mb-4 text-sm">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  Hora: {order.deliveryTime || 'No especificada'}
-                </div>
-
-                <div className="border-t border-gray-100 pt-3">
-                  <p className="text-xs text-gray-500 font-semibold mb-2 uppercase">Productos:</p>
-                  <ul className="text-sm space-y-1 mb-4">
-                    {order.items.map(item => {
-                      const falta = order.status === 'Cancelado'
-                        ? null
-                        : faltantes.find(f => f.id === item.id);
-
-                      return (
-                        <li key={item.id} className="text-gray-700">
-                          <div className="flex justify-between">
-                            <span>{item.quantity}x {item.name}</span>
-                            <span className="text-gray-500 text-xs">{(item.price * item.quantity).toLocaleString('es-CL', {style:'currency', currency:'CLP'})}</span>
-                          </div>
-                          {falta && (
-                            <div className="text-xs text-orange-700 font-medium">
-                              Faltan {falta.unitsShort} unidades por producir
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <div className="flex justify-between items-center font-bold text-lg text-gray-800">
-                    <span>Total:</span>
-                    <span>{order.total.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Actions Footer */}
-              <div className="p-3 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end">
-                {order.status === 'Pendiente' && (
-                  <>
-                    <button 
-                      onClick={() => onUpdateOrderStatus(order.id, 'Cancelado')}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors tooltip"
-                      title="Cancelar"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={() => handleCompleteOrder(order)}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors tooltip flex items-center gap-1"
-                      title="Marcar como Completado"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="text-sm font-medium">Entregar</span>
-                    </button>
-                  </>
-                )}
-                <button 
-                  onClick={() => {
-                    if (window.confirm('¿Eliminar pedido permanentemente?')) onDeleteOrder(order.id);
-                  }}
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors ml-auto"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+          pedidosFiltrados.map(order => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              faltantes={faltantes}
+              onEdit={openEditModal}
+              onUpdateOrderStatus={onUpdateOrderStatus}
+              onDeleteOrder={onDeleteOrder}
+            />
           ))
         )}
       </div>
 
-      {/* Add Order Modal */}
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
             <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                <CalendarClock className="w-5 h-5 text-blue-600" />
-                Crear Nuevo Pedido
+                {editingId ? <Pencil className="w-5 h-5 text-blue-600" /> : <CalendarClock className="w-5 h-5 text-blue-600" />}
+                {editingId ? `Editar pedido ${editingId}` : 'Crear Nuevo Pedido'}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-              {/* Form Side */}
+              {/* Datos */}
               <div className="w-full md:w-1/2 p-4 sm:p-6 border-r border-gray-100 overflow-y-auto">
                 <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -323,10 +304,53 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                       />
                     </div>
                   </div>
+
+                  <div className="border-t border-gray-100 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado del pago</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {ESTADOS_PAGO.map(estado => (
+                        <button
+                          key={estado}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, paymentStatus: estado }))}
+                          className={`px-2 py-2 rounded-md text-sm font-medium border transition-colors ${
+                            formData.paymentStatus === estado
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {estado}
+                        </button>
+                      ))}
+                    </div>
+
+                    {formData.paymentStatus === 'Abonado' && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">¿Cuánto abonó?</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 text-sm">$</span>
+                          </div>
+                          <input
+                            type="number"
+                            name="paidAmount"
+                            min="0"
+                            value={formData.paidAmount}
+                            onChange={handleInputChange}
+                            className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="0"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Falta cobrar: {clp(Math.max(0, calculateTotal() - (Number(formData.paidAmount) || 0)))}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </form>
               </div>
 
-              {/* Cart Side */}
+              {/* Carrito */}
               <div className="w-full md:w-1/2 flex flex-col bg-gray-50 h-full overflow-hidden">
                 <div className="p-4 border-b border-gray-200 bg-white">
                   <label className="block text-sm font-bold text-gray-700 mb-2">Agregar Productos (Bolsas)</label>
@@ -348,9 +372,14 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                             key={product.id}
                             type="button"
                             onClick={() => addToCart(product)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 text-sm flex justify-between"
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 text-sm flex justify-between gap-2"
                           >
-                            <span className="font-medium truncate mr-2">{product.name}</span>
+                            <span className="min-w-0">
+                              <span className="font-medium block truncate">{product.name}</span>
+                              <span className="text-xs text-gray-500">
+                                {parseInt(product.unitsPerPackage) || 1} unidades por bolsa
+                              </span>
+                            </span>
                             <span className="text-blue-600 font-bold flex-shrink-0">${product.price}</span>
                           </button>
                         ))}
@@ -371,16 +400,19 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="font-medium text-sm text-gray-900 truncate" title={item.name}>{item.name}</div>
                           <div className="text-blue-600 text-xs font-semibold">${item.price} c/u</div>
+                          <div className="text-xs text-gray-600 font-medium">
+                            {item.quantity} {item.quantity === 1 ? 'bolsa' : 'bolsas'} = {unidadesDeItem(item)} unidades
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             min="1"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
                             className="w-16 px-2 py-1 text-center border border-gray-300 rounded text-sm"
                           />
-                          <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
+                          <button type="button" onClick={() => removeFromCart(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -390,11 +422,16 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                 </div>
 
                 <div className="p-4 bg-white border-t border-gray-200">
+                  {cart.length > 0 && (
+                    <div className="text-sm text-gray-600 bg-gray-50 rounded-md px-3 py-2 mb-3 border border-gray-100">
+                      En total: <span className="font-semibold">{cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'bolsa' : 'bolsas'}</span>
+                      {' · '}
+                      <span className="font-semibold">{unidadesTotales(cart)} unidades</span> de masa
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                     <span className="font-bold text-gray-700">Total del Pedido:</span>
-                    <span className="text-xl font-bold text-blue-600 break-all">
-                      {calculateTotal().toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
-                    </span>
+                    <span className="text-xl font-bold text-blue-600 break-all">{clp(calculateTotal())}</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
                     <button
@@ -409,7 +446,7 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                       type="submit"
                       className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700"
                     >
-                      Guardar Pedido
+                      {editingId ? 'Guardar cambios' : 'Guardar Pedido'}
                     </button>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, Cl
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { applyProductEdit } from './lib/inventory';
 import { decidirOrigen } from './lib/syncPayload';
+import { deltaReserva, unidadesDeItem } from './lib/pedidos';
 
 const CLOUD_TABLE_NAME = 'app_state';
 
@@ -256,6 +257,48 @@ function App() {
       stockReserved: true,
       reservationBreakdown
     }]);
+
+    return { ok: true, faltantes };
+  };
+
+  // Editar recalcula la reserva: se devuelve al stock lo que el pedido tenía
+  // apartado y se descuenta lo nuevo, producto por producto. `deltaReserva`
+  // hace esa cuenta y está probada aparte, porque un error acá descuadra el
+  // inventario sin que se note.
+  const handleEditOrder = (updatedOrder) => {
+    const original = orders.find(order => order.id === updatedOrder.id);
+    if (!original) return { ok: false, message: 'No se encontró el pedido.' };
+
+    const delta = deltaReserva(original.items, updatedOrder.items);
+
+    setProducts(prevProducts => prevProducts.map(product => (
+      delta[product.id]
+        ? { ...product, stock: Number(product.stock || 0) + delta[product.id] }
+        : product
+    )));
+
+    const reservationBreakdown = updatedOrder.items.reduce((acc, item) => {
+      const existente = acc.find(r => r.productId === item.id);
+      const unidades = unidadesDeItem(item);
+      if (existente) existente.unitsReserved += unidades;
+      else acc.push({ productId: item.id, unitsReserved: unidades });
+      return acc;
+    }, []);
+
+    setOrders(prevOrders => prevOrders.map(order => (
+      order.id === updatedOrder.id
+        ? { ...order, ...updatedOrder, stockReserved: true, reservationBreakdown }
+        : order
+    )));
+
+    // Faltantes contra el stock que queda después de aplicar el delta.
+    const faltantes = products.reduce((acc, product) => {
+      const stockResultante = Number(product.stock || 0) + (delta[product.id] || 0);
+      if (stockResultante < 0) {
+        acc.push({ id: product.id, name: product.name, unitsShort: -stockResultante });
+      }
+      return acc;
+    }, []);
 
     return { ok: true, faltantes };
   };
@@ -704,6 +747,7 @@ function App() {
               products={products}
               orders={orders}
               onAddOrder={handleAddOrder}
+              onEditOrder={handleEditOrder}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onDeleteOrder={handleDeleteOrder}
             />
