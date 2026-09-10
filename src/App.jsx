@@ -759,7 +759,7 @@ function App() {
               onRegisterProduction={handleRegisterProduction}
             />
           ) : (
-            <Statistics products={products} sales={sales} />
+            <Statistics products={products} sales={sales} orders={orders} />
           )}
         </div>
       </main>

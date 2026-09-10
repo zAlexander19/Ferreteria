@@ -6,6 +6,41 @@ import { comprometidoPorProducto } from '../lib/pedidos';
 
 const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
 
+// El detalle de stock se muestra igual en la tarjeta del celular y en la tabla.
+function BloqueStock({ product, comprometido }) {
+  const v = vistaStock(product, comprometido);
+  const bajo = v.disponible <= (product.minStock || 5);
+
+  return (
+    <div className="text-sm space-y-0.5">
+      <div className="text-gray-600">
+        <span className="text-xs text-gray-500">En máquina:</span>{' '}
+        <span className="font-medium">{v.enMaquina}</span>
+      </div>
+      <div className="text-gray-600">
+        <span className="text-xs text-gray-500">Reservado:</span>{' '}
+        <span className={v.reservado > 0 ? 'font-medium text-amber-700' : 'font-medium'}>
+          {v.reservado}
+        </span>
+      </div>
+      <div className={twMerge('flex items-center font-bold', bajo ? 'text-red-600' : 'text-green-600')}>
+        <span className="text-xs font-normal text-gray-500 mr-1">Disponible:</span>
+        {v.disponible}
+        {bajo && <AlertTriangle className="ml-1 w-4 h-4 text-red-500" />}
+      </div>
+      {bajo && (
+        <span className="text-xs text-red-500 block">
+          {v.disponible < 0
+            ? `Faltan ${-v.disponible} por producir`
+            : `Reordenar (Mín: ${product.minStock || 5})`}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const precioBolsa = p => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(p);
+
 export function InventoryTable({ products, orders = [], onAddProduct, onEditProduct, onDeleteProduct }) {
   // Unidades ya apartadas para pedidos pendientes. Sin esto, un producto en 0
   // porque todo esta comprometido se ve igual que uno en 0 y libre.
@@ -330,108 +365,116 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
         </div>
       )}
 
-      {/* Table Section */}
+      {/* Productos: tarjetas apiladas en celular, tabla desde md */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-[760px] w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Producto</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock (Unidades)</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Bolsa</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
-                    {products.length === 0 ? "No hay productos en el inventario" : "No se encontraron productos con estos filtros"}
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full text-gray-500">
-                          <Package className="w-5 h-5" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        const v = vistaStock(product, comprometido[product.id]);
-                        const bajo = v.disponible <= (product.minStock || 5);
+        {filteredProducts.length === 0 ? (
+          <div className="px-6 py-10 text-center text-gray-500">
+            {products.length === 0 ? "No hay productos en el inventario" : "No se encontraron productos con estos filtros"}
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-gray-200 md:hidden">
+              {filteredProducts.map((product) => (
+                <li key={product.id} className="p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                      <div className="text-xs text-gray-500">{product.id}</div>
+                    </div>
+                    <span className="shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {product.category}
+                    </span>
+                  </div>
 
-                        return (
-                          <div className="text-sm space-y-0.5">
-                            <div className="text-gray-600">
-                              <span className="text-xs text-gray-500">En máquina:</span>{' '}
-                              <span className="font-medium">{v.enMaquina}</span>
-                            </div>
-                            <div className="text-gray-600">
-                              <span className="text-xs text-gray-500">Reservado:</span>{' '}
-                              <span className={v.reservado > 0 ? 'font-medium text-amber-700' : 'font-medium'}>
-                                {v.reservado}
-                              </span>
-                            </div>
-                            <div className={twMerge(
-                              'flex items-center font-bold',
-                              bajo ? 'text-red-600' : 'text-green-600'
-                            )}>
-                              <span className="text-xs font-normal text-gray-500 mr-1">Disponible:</span>
-                              {v.disponible}
-                              {bajo && <AlertTriangle className="ml-1 w-4 h-4 text-red-500" />}
-                            </div>
-                            {bajo && (
-                              <span className="text-xs text-red-500 block">
-                                {v.disponible < 0
-                                  ? `Faltan ${-v.disponible} por producir`
-                                  : `Reordenar (Mín: ${product.minStock || 5})`}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(product)}
-                          className="text-blue-600 hover:text-blue-900 focus:outline-none transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-900 focus:outline-none transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
+                  <div className="mt-3 flex justify-between items-end gap-3">
+                    <BloqueStock product={product} comprometido={comprometido[product.id]} />
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Precio bolsa</div>
+                      <div className="text-sm font-semibold text-gray-800">{precioBolsa(product.price)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => openEditModal(product)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-blue-200 text-blue-700 rounded-md font-medium active:bg-blue-50"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-red-200 text-red-700 rounded-md font-medium active:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-[760px] w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Producto</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock (Unidades)</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Bolsa</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full text-gray-500">
+                            <Package className="w-5 h-5" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm text-gray-500">{product.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {product.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <BloqueStock product={product} comprometido={comprometido[product.id]} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {precioBolsa(product.price)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(product)}
+                            className="text-blue-600 hover:text-blue-900 focus:outline-none transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="text-red-600 hover:text-red-900 focus:outline-none transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
