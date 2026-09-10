@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { ShoppingCart, Filter, Package } from 'lucide-react';
+import { RangoFechas } from './RangoFechas';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export function Statistics({ products, sales = [] }) {
-  const [dateFilter, setDateFilter] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
   const uniqueCategories = useMemo(() => {
@@ -14,14 +16,17 @@ export function Statistics({ products, sales = [] }) {
 
   const filteredSales = useMemo(() => {
     let result = [...sales];
-    if (dateFilter) {
-      result = result.filter(s => s.date.startsWith(dateFilter));
-    }
+
+    // `date` es un ISO completo ('2026-09-10T14:33:00.000Z'); alcanza con
+    // comparar los primeros 10 caracteres contra 'YYYY-MM-DD'.
+    if (desde) result = result.filter(s => (s.date || '').slice(0, 10) >= desde);
+    if (hasta) result = result.filter(s => (s.date || '').slice(0, 10) <= hasta);
+
     if (categoryFilter) {
       result = result.filter(s => s.items.some(item => item.category === categoryFilter));
     }
     return result.reverse(); // Más recientes primero
-  }, [sales, dateFilter, categoryFilter]);
+  }, [sales, desde, hasta, categoryFilter]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -129,17 +134,15 @@ export function Statistics({ products, sales = [] }) {
               ))}
             </select>
 
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              title="Filtrar por fecha"
+            <RangoFechas
+              desde={desde}
+              hasta={hasta}
+              onChange={({ desde: d, hasta: h }) => { setDesde(d); setHasta(h); }}
             />
-            
-            {(dateFilter || categoryFilter) && (
+
+            {(desde || hasta || categoryFilter) && (
               <button 
-                onClick={() => { setDateFilter(''); setCategoryFilter(''); }}
+                onClick={() => { setDesde(''); setHasta(''); setCategoryFilter(''); }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
               >
                 Limpiar filtros

@@ -4,6 +4,7 @@ import { Sales } from './views/Sales';
 import { Statistics } from './views/Statistics';
 import { Orders } from './views/Orders';
 import { Production } from './views/Production';
+import { LogoEmpresa } from './views/LogoEmpresa';
 import { LayoutDashboard, ShoppingCart, BarChart3, Settings, LogOut, Package, ClipboardList, Mail, KeyRound, Menu, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { applyProductEdit } from './lib/inventory';
@@ -528,8 +529,8 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8">
           <div className="mb-6 text-center">
-            <div className="mx-auto h-14 w-14 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
-              <Package className="w-7 h-7 text-white" />
+            <div className="flex justify-center mb-3">
+              <LogoEmpresa size="lg" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Fabrica de Masas</h1>
             <p className="text-sm text-gray-500">Inicia sesion para acceder al sistema</p>
@@ -605,9 +606,7 @@ function App() {
         <div className="p-4 lg:p-6 border-b border-gray-100 shrink-0">
            <div className="flex items-center justify-between gap-3">
              <div className="flex items-center gap-3">
-             <div className="bg-blue-600 p-2 rounded-lg">
-               <Package className="w-6 h-6 text-white" />
-             </div>
+             <LogoEmpresa />
              <h1 className="text-xl font-bold text-gray-800">Fábrica de Masas<br/><span className="text-sm font-normal text-gray-500">Gestión V1.0</span></h1>
              </div>
              <button

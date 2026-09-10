@@ -1,0 +1,15 @@
+Poné acá el logo de la empresa, con el nombre:
+
+    logo_masas.png
+
+Se aceptan también .jpg, .jpeg, .webp o .svg — la app prueba esas extensiones
+en ese orden. Mientras no haya ninguna, muestra el ícono de cajita azul.
+
+El logo aparece en dos lugares: al lado de "Fábrica de Masas" en la barra
+lateral, y arriba del formulario de inicio de sesión.
+
+Conviene que sea cuadrado (por ejemplo 512x512) y con fondo transparente si es
+PNG, porque se dibuja dentro de un recuadro blanco redondeado.
+
+Después de copiarlo hay que subir el cambio a GitHub para que aparezca en
+ferreteria-masas.vercel.app.
