@@ -292,6 +292,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                           <th className="px-4 py-2">Entrega</th>
                           <th className="px-4 py-2">Cliente</th>
                           <th className="px-4 py-2">Productos</th>
+                          <th className="px-4 py-2 text-right">Cant. bolsas</th>
                           <th className="px-4 py-2 text-right">Unidades</th>
                           <th className="px-4 py-2 text-right">Total</th>
                           <th className="px-4 py-2">Pago</th>
@@ -307,35 +308,44 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                               className="hover:bg-blue-50 cursor-pointer"
                               title="Tocá para ver el pedido completo"
                             >
-                              <td className="px-4 py-3 whitespace-nowrap">
+                              <td className="px-4 py-3 whitespace-nowrap align-top">
                                 <div className="font-medium text-gray-800">{order.deliveryDate || 'Sin fecha'}</div>
                                 <div className="text-xs text-gray-500">{order.deliveryTime || ''}</div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 align-top">
                                 <div className="font-medium text-gray-800">{order.customerName}</div>
                                 <div className="text-xs text-gray-500">{order.id}</div>
                               </td>
-                              <td className="px-4 py-3 text-gray-700">
+                              <td className="px-4 py-3 text-gray-700 align-top">
                                 <ul className="space-y-1">
                                   {order.items.map(item => (
-                                    <li key={item.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <li key={item.id} className="h-6 flex items-center">
                                       <EtiquetasProducto product={item} />
-                                      <span className="text-sm whitespace-nowrap">
-                                        <span className="font-semibold">{item.quantity}</span>
-                                        {' '}{item.quantity === 1 ? 'bolsa' : 'bolsas'}
-                                        <span className="text-gray-500"> · {unidadesDeItem(item)} uds</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </td>
+                              {/* Una línea por producto, a la misma altura que la
+                                  columna de al lado para que se lean apareadas. */}
+                              <td className="px-4 py-3 text-right align-top">
+                                <ul className="space-y-1">
+                                  {order.items.map(item => (
+                                    <li key={item.id} className="h-6 flex items-center justify-end whitespace-nowrap">
+                                      <span className="font-semibold text-gray-800">{item.quantity}</span>
+                                      <span className="text-gray-500 ml-1">
+                                        {item.quantity === 1 ? 'bolsa' : 'bolsas'}
                                       </span>
                                     </li>
                                   ))}
                                 </ul>
                               </td>
-                              <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700">
-                                {unidadesTotales(order.items)}
+                              <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700 align-top">
+                                <span className="h-6 inline-flex items-center">{unidadesTotales(order.items)}</span>
                               </td>
-                              <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-gray-800">
-                                {clp(order.total)}
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-gray-800 align-top">
+                                <span className="h-6 inline-flex items-center">{clp(order.total)}</span>
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
+                              <td className="px-4 py-3 whitespace-nowrap align-top">
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
                                   pago === 'Pagado' ? 'bg-green-100 text-green-800'
                                     : pago === 'Abonado' ? 'bg-amber-100 text-amber-800'
