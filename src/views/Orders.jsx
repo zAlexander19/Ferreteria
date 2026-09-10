@@ -316,7 +316,18 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                                 <div className="text-xs text-gray-500">{order.id}</div>
                               </td>
                               <td className="px-4 py-3 text-gray-700">
-                                {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                                <ul className="space-y-1">
+                                  {order.items.map(item => (
+                                    <li key={item.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                      <EtiquetasProducto product={item} />
+                                      <span className="text-sm whitespace-nowrap">
+                                        <span className="font-semibold">{item.quantity}</span>
+                                        {' '}{item.quantity === 1 ? 'bolsa' : 'bolsas'}
+                                        <span className="text-gray-500"> · {unidadesDeItem(item)} uds</span>
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
                               </td>
                               <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700">
                                 {unidadesTotales(order.items)}

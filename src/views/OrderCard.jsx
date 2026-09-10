@@ -1,4 +1,5 @@
 import { CalendarClock, Trash2, CheckCircle, Clock, X, User, AlertTriangle, Pencil } from 'lucide-react';
+import { EtiquetasProducto } from './EtiquetasProducto';
 import { unidadesDeItem, unidadesTotales, saldoPendiente } from '../lib/pedidos';
 
 const clp = valor => (Number(valor) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
@@ -92,12 +93,13 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
 
               return (
                 <li key={item.id} className="text-gray-700">
-                  <div className="flex justify-between gap-2">
-                    <span>{item.quantity}x {item.name}</span>
+                  <div className="flex justify-between items-start gap-2">
+                    <EtiquetasProducto product={item} />
                     <span className="text-gray-500 text-xs whitespace-nowrap">{clp(item.price * item.quantity)}</span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {item.quantity} {item.quantity === 1 ? 'bolsa' : 'bolsas'} = {unidadesDeItem(item)} unidades
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    <span className="font-semibold">{item.quantity}</span>
+                    {' '}{item.quantity === 1 ? 'bolsa' : 'bolsas'} = {unidadesDeItem(item)} unidades
                   </div>
                   {falta && (
                     <div className="text-xs text-orange-700 font-medium">
