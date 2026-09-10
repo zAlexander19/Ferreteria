@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Factory, Package, User, Layers3, PlusCircle, Trash2 } from 'lucide-react';
+import { Factory, Package, User, Layers3, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { faltantesPorProducto } from '../lib/inventory';
 
 const createEmptyLine = () => ({
   productId: '',
@@ -40,6 +41,7 @@ const getCategoryBadgeClass = (category) => {
 };
 
 export function Production({ products, productions = [], onRegisterProduction }) {
+  const faltantes = useMemo(() => faltantesPorProducto(products), [products]);
   const [operatorName, setOperatorName] = useState('');
   const [lines, setLines] = useState([createEmptyLine()]);
 
@@ -130,6 +132,28 @@ export function Production({ products, productions = [], onRegisterProduction })
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {faltantes.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-lg font-bold text-orange-900 flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            Falta producir para los pedidos agendados
+          </h3>
+          <p className="text-sm text-orange-800 mb-3">
+            Estas unidades ya están comprometidas en pedidos y todavía no se fabricaron.
+          </p>
+          <ul className="space-y-1">
+            {faltantes.map(f => (
+              <li key={f.id} className="flex justify-between items-center bg-white rounded-md border border-orange-100 px-3 py-2">
+                <span className="text-sm font-medium text-gray-800">{f.name}</span>
+                <span className="text-sm font-bold text-orange-700 whitespace-nowrap">
+                  {f.unitsShort} unidades
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
           <div className="text-sm text-gray-500">Registros de hoy</div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSku, applyProductEdit, normalizeProductFields } from './inventory';
+import { generateSku, applyProductEdit, normalizeProductFields, faltantesPorProducto } from './inventory';
 
 describe('generateSku', () => {
   it('arranca en 001 cuando no hay productos de esa categoria', () => {
@@ -95,5 +95,46 @@ describe('normalizeProductFields', () => {
     expect(resultado.category).toBe('Freir');
     expect(resultado.isCocktail).toBe(true);
     expect(resultado.unitsPerPackage).toBe('10');
+  });
+});
+
+describe('faltantesPorProducto', () => {
+  it('no devuelve nada cuando ningun producto esta en negativo', () => {
+    const products = [
+      { id: 'FRE-001', name: 'Freir 12cm', stock: 100 },
+      { id: 'HOR-001', name: 'Horno 8cm', stock: 0 },
+    ];
+    expect(faltantesPorProducto(products)).toEqual([]);
+  });
+
+  it('devuelve las unidades que faltan de un producto en negativo', () => {
+    const products = [{ id: 'FRE-001', name: 'Freir 12cm', stock: -70 }];
+    expect(faltantesPorProducto(products)).toEqual([
+      { id: 'FRE-001', name: 'Freir 12cm', unitsShort: 70 },
+    ]);
+  });
+
+  it('solo incluye los que estan en negativo', () => {
+    const products = [
+      { id: 'FRE-001', name: 'Freir 12cm', stock: -70 },
+      { id: 'HOR-001', name: 'Horno 8cm', stock: 50 },
+      { id: 'SOP-001', name: 'Sopaipillas 10cm', stock: -40 },
+    ];
+    expect(faltantesPorProducto(products).map(f => f.id)).toEqual(['FRE-001', 'SOP-001']);
+  });
+
+  it('no rompe con stock ausente o no numerico', () => {
+    const products = [
+      { id: 'FRE-001', name: 'Freir 12cm' },
+      { id: 'HOR-001', name: 'Horno 8cm', stock: null },
+      { id: 'SOP-001', name: 'Sopaipillas 10cm', stock: -5 },
+    ];
+    expect(faltantesPorProducto(products)).toEqual([
+      { id: 'SOP-001', name: 'Sopaipillas 10cm', unitsShort: 5 },
+    ]);
+  });
+
+  it('acepta una lista vacia', () => {
+    expect(faltantesPorProducto([])).toEqual([]);
   });
 });

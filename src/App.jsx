@@ -230,15 +230,16 @@ function App() {
       return acc;
     }, {});
 
-    const insufficientProducts = products.filter(product => {
+    // Un pedido se agenda aunque no haya stock: sirve justamente para saber qué
+    // hay que producir. La reserva descuenta igual, así que el stock puede
+    // quedar en negativo, y ese negativo ES el faltante (ver
+    // faltantesPorProducto). Al registrar producción sube solo y se corrige.
+    const faltantes = products.reduce((acc, product) => {
       const required = requiredUnitsByProduct[product.id] || 0;
-      return required > 0 && Number(product.stock || 0) < required;
-    });
-
-    if (insufficientProducts.length > 0) {
-      const names = insufficientProducts.map(p => p.name).join(', ');
-      return { ok: false, message: `Stock insuficiente para: ${names}` };
-    }
+      const unitsShort = Math.max(0, required - Number(product.stock || 0));
+      if (unitsShort > 0) acc.push({ id: product.id, name: product.name, unitsShort });
+      return acc;
+    }, []);
 
     setProducts(prevProducts => prevProducts.map(product => ({
       ...product,
@@ -256,7 +257,7 @@ function App() {
       reservationBreakdown
     }]);
 
-    return { ok: true };
+    return { ok: true, faltantes };
   };
 
   const handleUpdateOrderStatus = (orderId, status) => {

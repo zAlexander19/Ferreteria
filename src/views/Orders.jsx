@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { CalendarClock, Plus, Search, Trash2, CheckCircle, Clock, X, ShoppingCart, User } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { CalendarClock, Plus, Search, Trash2, CheckCircle, Clock, X, ShoppingCart, User, AlertTriangle } from 'lucide-react';
+import { faltantesPorProducto } from '../lib/inventory';
 
 export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDeleteOrder }) {
+  const faltantes = useMemo(() => faltantesPorProducto(products), [products]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -91,8 +93,17 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
 
     const result = onAddOrder(newOrder);
     if (!result?.ok) {
-      alert(result?.message || 'No se pudo crear el pedido por falta de stock.');
+      alert(result?.message || 'No se pudo crear el pedido.');
       return;
+    }
+
+    // El pedido se agenda igual sin stock; el aviso es informativo para que
+    // sepa en el momento qué le falta producir.
+    if (result.faltantes?.length > 0) {
+      const detalle = result.faltantes
+        .map(f => `${f.unitsShort} unidades de ${f.name}`)
+        .join('\n');
+      alert(`Pedido agendado.\n\nFalta producir:\n${detalle}`);
     }
 
     setIsModalOpen(false);
@@ -134,11 +145,27 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                   : 'bg-amber-100 text-amber-800 border border-amber-200';
 
+                // Faltante en vivo contra el stock de hoy: si el pedido sigue
+                // pendiente y alguno de sus productos está en negativo, todavía
+                // hay que producirlo. Al registrar producción se apaga solo.
+                const faltantesDelPedido = isReleased
+                  ? []
+                  : faltantes.filter(f => order.items.some(item => item.id === f.id));
+
                 return (
-                  <div className="px-4 pt-3 pb-1">
+                  <div className="px-4 pt-3 pb-1 flex flex-wrap gap-2">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${stockLabelClass}`}>
                       {stockLabel}
                     </span>
+                    {faltantesDelPedido.length > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200"
+                        title={faltantesDelPedido.map(f => `${f.unitsShort} unidades de ${f.name}`).join('\n')}
+                      >
+                        <AlertTriangle className="w-3 h-3" />
+                        Falta producir
+                      </span>
+                    )}
                   </div>
                 );
               })()}
@@ -171,12 +198,25 @@ export function Orders({ products, orders, onAddOrder, onUpdateOrderStatus, onDe
                 <div className="border-t border-gray-100 pt-3">
                   <p className="text-xs text-gray-500 font-semibold mb-2 uppercase">Productos:</p>
                   <ul className="text-sm space-y-1 mb-4">
-                    {order.items.map(item => (
-                      <li key={item.id} className="flex justify-between text-gray-700">
-                        <span>{item.quantity}x {item.name}</span>
-                        <span className="text-gray-500 text-xs">{(item.price * item.quantity).toLocaleString('es-CL', {style:'currency', currency:'CLP'})}</span>
-                      </li>
-                    ))}
+                    {order.items.map(item => {
+                      const falta = order.status === 'Cancelado'
+                        ? null
+                        : faltantes.find(f => f.id === item.id);
+
+                      return (
+                        <li key={item.id} className="text-gray-700">
+                          <div className="flex justify-between">
+                            <span>{item.quantity}x {item.name}</span>
+                            <span className="text-gray-500 text-xs">{(item.price * item.quantity).toLocaleString('es-CL', {style:'currency', currency:'CLP'})}</span>
+                          </div>
+                          {falta && (
+                            <div className="text-xs text-orange-700 font-medium">
+                              Faltan {falta.unitsShort} unidades por producir
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                   <div className="flex justify-between items-center font-bold text-lg text-gray-800">
                     <span>Total:</span>

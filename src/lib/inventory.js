@@ -26,3 +26,17 @@ export function normalizeProductFields(formData) {
     cost: Number(formData.cost) || 0,
   };
 }
+
+// Con el stock en negativo, ese negativo ES el faltante: si un producto quedó
+// en -70 es porque hay pedidos agendados que piden 70 unidades más de las que
+// hay. Se calcula en vivo, así que al registrar producción el faltante baja
+// solo y desaparece sin que nadie tenga que reconciliar nada.
+export function faltantesPorProducto(products) {
+  return products
+    .filter(p => Number(p.stock) < 0)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      unitsShort: -Number(p.stock),
+    }));
+}

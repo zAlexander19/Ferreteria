@@ -11,10 +11,12 @@ export function Sales({ products, onCompleteSale }) {
       setSearchResults([]);
       return;
     }
-    const results = products.filter(p => 
-      (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       p.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      p.stock > 0
+    // Se listan todos los que coinciden, tengan stock o no: los que no alcanzan
+    // para armar ni una bolsa se muestran con etiqueta roja en vez de
+    // desaparecer, para que no parezca que el producto no existe.
+    const results = products.filter(p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setSearchResults(results);
   }, [searchTerm, products]);
@@ -97,21 +99,41 @@ export function Sales({ products, onCompleteSale }) {
           {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 z-10 max-h-60 overflow-y-auto">
-              {searchResults.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex justify-between items-center"
-                >
-                  <div>
-                    <div className="font-medium text-gray-800">{product.name}</div>
-                    <div className="text-xs text-gray-500">SKU: {product.id} | Stock (Unidades): {product.stock} | Equivale a: {Math.floor(product.stock / parseInt(product.unitsPerPackage || 1))} bolsas posibles</div>
-                  </div>
-                  <div className="font-semibold text-blue-600">
-                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}
-                  </div>
-                </button>
-              ))}
+              {searchResults.map(product => {
+                const unitsPerBag = parseInt(product.unitsPerPackage) || 1;
+                const stock = Number(product.stock) || 0;
+                const sinStock = stock < unitsPerBag;
+                const faltan = stock < 0 ? -stock : 0;
+
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex justify-between items-center gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-800">{product.name}</div>
+                      <div className="text-xs text-gray-500">
+                        SKU: {product.id} | Stock (Unidades): {stock} | Equivale a: {Math.max(0, Math.floor(stock / unitsPerBag))} bolsas posibles
+                      </div>
+                      {faltan > 0 && (
+                        <div className="text-xs text-orange-700 font-medium">
+                          Faltan {faltan} unidades por producir
+                        </div>
+                      )}
+                    </div>
+                    {sinStock ? (
+                      <span className="shrink-0 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                        Producto sin stock
+                      </span>
+                    ) : (
+                      <div className="shrink-0 font-semibold text-blue-600">
+                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

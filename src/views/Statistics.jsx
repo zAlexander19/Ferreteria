@@ -64,7 +64,10 @@ export function Statistics({ products, sales = [] }) {
     }, []).filter(c => c.value > 0);
 
     // Finance
-    const totalInvestment = products.reduce((acc, curr) => acc + (curr.stock * (curr.cost || 0)), 0);
+    // Math.max(0, ...): el stock puede quedar negativo cuando hay pedidos
+    // agendados sin producir. Ese negativo es un faltante, no una inversión
+    // negativa, así que no debe restar del capital inmovilizado.
+    const totalInvestment = products.reduce((acc, curr) => acc + (Math.max(0, Number(curr.stock) || 0) * (curr.cost || 0)), 0);
     const totalProfit = products.reduce((acc, curr) => {
         const cost = curr.cost || 0;
         const price = curr.price || 0;
