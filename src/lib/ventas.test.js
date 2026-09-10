@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ventasUnificadas, totalPorOrigen, filtrarVentas } from './ventas';
+import {
+  ventasUnificadas, totalPorOrigen, filtrarVentas,
+  ventasDelPeriodo, serieFinanciera, totalPorCategoria, aniosConVentas,
+} from './ventas';
 
 // Las ventas del mostrador guardan un ISO completo. Se construye desde una
 // fecha LOCAL para que la prueba valga en cualquier zona horaria.
@@ -138,5 +141,186 @@ describe('filtrarVentas', () => {
 
   it('acepta solo hasta', () => {
     expect(filtrarVentas(ventas, { hasta: '2026-09-15' }).map(v => v.id)).toEqual(['PED-1', 'VEN-1']);
+  });
+});
+
+// --- Agregados para los gráficos de Estadísticas -----------------------------
+
+// Una venta ya unificada: fecha 'YYYY-MM-DD' e items con el snapshot del producto.
+const v = (fecha, items) => ({ id: 'V-' + fecha, fecha, hora: '12:00', items, total: 0 });
+const item = (categoria, precio, costo, bolsas, udsPorBolsa = 10) => ({
+  id: categoria + '-1',
+  category: categoria,
+  price: precio,
+  cost: costo,
+  quantity: bolsas,
+  unitsPerPackage: String(udsPorBolsa),
+});
+
+describe('ventasDelPeriodo', () => {
+  const ventas = [
+    v('2026-09-10', [item('Freir', 1500, 700, 1)]),
+    v('2026-09-25', [item('Horno', 2400, 1100, 2)]),
+    v('2026-04-25', [item('Freir', 1500, 700, 1)]),
+    v('2025-09-10', [item('Horno', 2400, 1100, 1)]),
+  ];
+
+  it('deja solo las del mes pedido', () => {
+    expect(ventasDelPeriodo(ventas, { anio: 2026, mes: 9 }).map(x => x.fecha))
+      .toEqual(['2026-09-10', '2026-09-25']);
+  });
+
+  it('sin mes toma el año entero', () => {
+    expect(ventasDelPeriodo(ventas, { anio: 2026, mes: null }).map(x => x.fecha))
+      .toEqual(['2026-09-10', '2026-09-25', '2026-04-25']);
+  });
+
+  it('no mezcla el mismo mes de otro año', () => {
+    expect(ventasDelPeriodo(ventas, { anio: 2025, mes: 9 }).map(x => x.fecha))
+      .toEqual(['2025-09-10']);
+  });
+
+  it('con lista vacía devuelve vacío', () => {
+    expect(ventasDelPeriodo([], { anio: 2026, mes: 9 })).toEqual([]);
+    expect(ventasDelPeriodo(undefined, { anio: 2026, mes: 9 })).toEqual([]);
+  });
+});
+
+describe('serieFinanciera por mes', () => {
+  it('arma un punto por cada día del mes, aunque no haya ventas', () => {
+    const r = serieFinanciera([], { anio: 2026, mes: 9 });
+    expect(r).toHaveLength(30);
+    expect(r[0].etiqueta).toBe('1');
+    expect(r[29].etiqueta).toBe('30');
+    expect(r.every(d => d.costo === 0 && d.ganancia === 0)).toBe(true);
+  });
+
+  it('respeta los meses de 31 días', () => {
+    expect(serieFinanciera([], { anio: 2026, mes: 1 })).toHaveLength(31);
+  });
+
+  it('respeta febrero bisiesto', () => {
+    expect(serieFinanciera([], { anio: 2024, mes: 2 })).toHaveLength(29);
+    expect(serieFinanciera([], { anio: 2026, mes: 2 })).toHaveLength(28);
+  });
+
+  it('pone costo y ganancia en el día que corresponde', () => {
+    // 2 bolsas a $2.400 con costo $1.100: costo 2200, ganancia 2600
+    const r = serieFinanciera([v('2026-09-10', [item('Horno', 2400, 1100, 2)])], { anio: 2026, mes: 9 });
+    expect(r[9]).toEqual({ etiqueta: '10', costo: 2200, ganancia: 2600 });
+    expect(r[8]).toEqual({ etiqueta: '9', costo: 0, ganancia: 0 });
+  });
+
+  it('suma varias ventas del mismo día', () => {
+    const r = serieFinanciera([
+      v('2026-09-10', [item('Horno', 2400, 1100, 2)]),
+      v('2026-09-10', [item('Freir', 1500, 700, 1)]),
+    ], { anio: 2026, mes: 9 });
+    expect(r[9]).toEqual({ etiqueta: '10', costo: 2900, ganancia: 3400 });
+  });
+
+  it('suma todos los items de una misma venta', () => {
+    const r = serieFinanciera([
+      v('2026-09-10', [item('Horno', 2400, 1100, 2), item('Freir', 1500, 700, 1)]),
+    ], { anio: 2026, mes: 9 });
+    expect(r[9]).toEqual({ etiqueta: '10', costo: 2900, ganancia: 3400 });
+  });
+
+  it('ignora las ventas de otro mes', () => {
+    const r = serieFinanciera([v('2026-08-10', [item('Horno', 2400, 1100, 2)])], { anio: 2026, mes: 9 });
+    expect(r.every(d => d.costo === 0 && d.ganancia === 0)).toBe(true);
+  });
+
+  it('acepta el costo guardado como texto', () => {
+    const r = serieFinanciera([v('2026-09-10', [item('Horno', 2400, '1100', 2)])], { anio: 2026, mes: 9 });
+    expect(r[9].costo).toBe(2200);
+  });
+
+  it('un producto sin costo deja la ganancia igual a la venta', () => {
+    const r = serieFinanciera([v('2026-09-10', [item('Horno', 2000, 0, 1)])], { anio: 2026, mes: 9 });
+    expect(r[9]).toEqual({ etiqueta: '10', costo: 0, ganancia: 2000 });
+  });
+});
+
+describe('serieFinanciera por año', () => {
+  it('arma los 12 meses aunque no haya ventas', () => {
+    const r = serieFinanciera([], { anio: 2026, mes: null });
+    expect(r).toHaveLength(12);
+    expect(r[0].etiqueta).toBe('ene');
+    expect(r[11].etiqueta).toBe('dic');
+  });
+
+  it('acumula cada venta en su mes', () => {
+    const r = serieFinanciera([
+      v('2026-09-10', [item('Horno', 2400, 1100, 2)]),
+      v('2026-09-25', [item('Freir', 1500, 700, 1)]),
+      v('2026-04-25', [item('Freir', 1500, 700, 1)]),
+    ], { anio: 2026, mes: null });
+    expect(r[8]).toEqual({ etiqueta: 'sep', costo: 2900, ganancia: 3400 });
+    expect(r[3]).toEqual({ etiqueta: 'abr', costo: 700, ganancia: 800 });
+    expect(r[0]).toEqual({ etiqueta: 'ene', costo: 0, ganancia: 0 });
+  });
+
+  it('ignora las ventas de otro año', () => {
+    const r = serieFinanciera([v('2025-09-10', [item('Horno', 2400, 1100, 2)])], { anio: 2026, mes: null });
+    expect(r.every(m => m.costo === 0 && m.ganancia === 0)).toBe(true);
+  });
+});
+
+describe('totalPorCategoria', () => {
+  it('devuelve plata y unidades por categoría', () => {
+    const r = totalPorCategoria([
+      v('2026-09-10', [item('Horno', 2400, 1100, 2, 10)]),   // $4.800, 20 uds
+      v('2026-09-11', [item('Freir', 1500, 700, 1, 10)]),    // $1.500, 10 uds
+    ]);
+    expect(r).toEqual([
+      { categoria: 'Horno', total: 4800, unidades: 20 },
+      { categoria: 'Freir', total: 1500, unidades: 10 },
+    ]);
+  });
+
+  it('junta la misma categoría de ventas distintas', () => {
+    const r = totalPorCategoria([
+      v('2026-09-10', [item('Freir', 1500, 700, 1, 10)]),
+      v('2026-09-11', [item('Freir', 1875, 1000, 2, 25)]),
+    ]);
+    expect(r).toEqual([{ categoria: 'Freir', total: 5250, unidades: 60 }]);
+  });
+
+  it('ordena de mayor a menor plata', () => {
+    const r = totalPorCategoria([
+      v('2026-09-10', [item('Freir', 1000, 500, 1)]),
+      v('2026-09-10', [item('Horno', 5000, 500, 1)]),
+      v('2026-09-10', [item('Sopaipillas', 3000, 500, 1)]),
+    ]);
+    expect(r.map(c => c.categoria)).toEqual(['Horno', 'Sopaipillas', 'Freir']);
+  });
+
+  it('un item sin categoría queda como Sin categoría', () => {
+    const sinCat = { id: 'X', price: 1000, cost: 0, quantity: 1, unitsPerPackage: '10' };
+    expect(totalPorCategoria([v('2026-09-10', [sinCat])]))
+      .toEqual([{ categoria: 'Sin categoría', total: 1000, unidades: 10 }]);
+  });
+
+  it('sin ventas devuelve vacío', () => {
+    expect(totalPorCategoria([])).toEqual([]);
+    expect(totalPorCategoria(undefined)).toEqual([]);
+  });
+});
+
+describe('aniosConVentas', () => {
+  it('devuelve los años sin repetir, del mas nuevo al mas viejo', () => {
+    const r = aniosConVentas([
+      v('2026-09-10', []), v('2025-04-01', []), v('2026-01-02', []),
+    ]);
+    expect(r).toEqual([2026, 2025]);
+  });
+
+  it('sin ventas devuelve el año actual', () => {
+    expect(aniosConVentas([])).toEqual([new Date().getFullYear()]);
+  });
+
+  it('ignora ventas sin fecha', () => {
+    expect(aniosConVentas([{ id: 'X', fecha: '', items: [] }])).toEqual([new Date().getFullYear()]);
   });
 });

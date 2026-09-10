@@ -3,7 +3,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 import { ShoppingCart, Package } from 'lucide-react';
 import { RangoFechas } from './RangoFechas';
 import { ListaVentas, ModalVentas } from './ListaVentas';
-import { ventasUnificadas, totalPorOrigen, filtrarVentas, PUNTO_DE_VENTA, PEDIDO } from '../lib/ventas';
+import { FiltroPeriodo } from './FiltroPeriodo';
+import {
+  ventasUnificadas, totalPorOrigen, filtrarVentas,
+  ventasDelPeriodo, serieFinanciera, totalPorCategoria,
+  PUNTO_DE_VENTA, PEDIDO,
+} from '../lib/ventas';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -11,10 +16,21 @@ const COLOR_ORIGEN = { [PUNTO_DE_VENTA]: '#2563eb', [PEDIDO]: '#9333ea' };
 
 const clp = v => (Number(v) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
+const MESES_LARGOS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
 export function Statistics({ products, sales = [], orders = [] }) {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [modalVentas, setModalVentas] = useState(false);
+
+  // El periodo manda sobre el grafico financiero y sobre la torta de categorias.
+  // `mes` se guarda siempre, aunque se este mirando el anio entero.
+  const [anio, setAnio] = useState(() => new Date().getFullYear());
+  const [mes, setMes] = useState(() => new Date().getMonth() + 1);
+  const [porAnio, setPorAnio] = useState(false);
 
   // Una venta es lo del mostrador mas los pedidos completados Y pagados.
   const ventas = useMemo(() => ventasUnificadas(sales, orders), [sales, orders]);
@@ -24,88 +40,29 @@ export function Statistics({ products, sales = [], orders = [] }) {
   const totalVendido = useMemo(() => ventas.reduce((s, v) => s + v.total, 0), [ventas]);
   const totalFiltrado = useMemo(() => ventasFiltradas.reduce((s, v) => s + v.total, 0), [ventasFiltradas]);
 
+  const periodo = useMemo(() => ({ anio, mes: porAnio ? null : mes }), [anio, mes, porAnio]);
+  const serie = useMemo(() => serieFinanciera(ventas, periodo), [ventas, periodo]);
+  const porCategoria = useMemo(
+    () => totalPorCategoria(ventasDelPeriodo(ventas, periodo)),
+    [ventas, periodo]
+  );
+  const hayMovimiento = useMemo(() => serie.some(p => p.costo !== 0 || p.ganancia !== 0), [serie]);
+  const nombrePeriodo = porAnio ? String(anio) : `${MESES_LARGOS[mes - 1]} de ${anio}`;
 
-  const stats = useMemo(() => {
-    const now = new Date();
 
-    // Best Sellers calculation for chart/list
-    const sortedBySales = [...products].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0));
-    const bestSellers = sortedBySales.slice(0, 10).filter(p => (p.salesCount || 0) > 0);
-
-    // Single Products for Cards
-    const topProduct = sortedBySales.length > 0 && (sortedBySales[0].salesCount || 0) > 0 ? sortedBySales[0] : null;
-    const worstProduct = sortedBySales.length > 0 ? sortedBySales[sortedBySales.length - 1] : null;
-
-    // Baja Rotación (No vendidos en 60 días)
-    const lowRotation = products.filter(p => {
-      if (!p.lastSaleDate) return true; // Nunca vendido
-      const lastSale = new Date(p.lastSaleDate);
-      const diffTime = now - lastSale;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 60;
-    });
-
-    const lowestStockProduct = [...products].sort((a, b) => a.stock - b.stock)[0] || null;
-
-    const stockChartData = products.map(p => ({
+  // Lo unico que se sigue usando del inventario es el grafico de stock. El
+  // resto de las cifras salen ahora de las ventas reales, no de los campos
+  // salesCount/lastSaleDate que quedan pegados en cada producto: esos guardan
+  // una sola fecha por producto y apilaban todo el historial en un punto.
+  const stockChartData = useMemo(
+    () => products.map(p => ({
       name: p.name,
       stock: p.stock,
       minStock: p.minStock || 5,
-      shortName: p.id // Usa ID o nombre corto para que cuadre en la gráfica
-    }));
-
-    // Categorías
-    const categoryData = products.reduce((acc, curr) => {
-      const existing = acc.find(c => c.name === curr.category);
-      if (existing) {
-        existing.value += (curr.salesCount || 0);
-      } else {
-        acc.push({ name: curr.category, value: (curr.salesCount || 0) });
-      }
-      return acc;
-    }, []).filter(c => c.value > 0);
-
-    // Finance
-    // Math.max(0, ...): el stock puede quedar negativo cuando hay pedidos
-    // agendados sin producir. Ese negativo es un faltante, no una inversión
-    // negativa, así que no debe restar del capital inmovilizado.
-    const totalInvestment = products.reduce((acc, curr) => acc + (Math.max(0, Number(curr.stock) || 0) * (curr.cost || 0)), 0);
-    const totalProfit = products.reduce((acc, curr) => {
-        const cost = curr.cost || 0;
-        const price = curr.price || 0;
-        return acc + ((curr.salesCount || 0) * (price - cost));
-    }, 0);
-
-    // History Calculation (Investment vs Profit)
-    const historyMap = products.reduce((acc, curr) => {
-      if (!curr.lastSaleDate) return acc;
-      const date = curr.lastSaleDate;
-      const salesCount = curr.salesCount || 0;
-      const price = curr.price || 0;
-      const cost = curr.cost || 0;
-
-      const profit = salesCount * (price - cost);
-      const investment = salesCount * cost;
-      
-      if (!acc[date]) {
-        acc[date] = { profit: 0, investment: 0 };
-      }
-      acc[date].profit += profit;
-      acc[date].investment += investment;
-
-      return acc;
-    }, {});
-
-    const chartData = Object.keys(historyMap)
-      .sort()
-      .map(date => ({
-        date: date,
-        profit: Math.round(historyMap[date].profit),
-        investment: Math.round(historyMap[date].investment)
-      }));
-
-    return { bestSellers, lowRotation, categoryData, topProduct, worstProduct, totalInvestment, totalProfit, chartData, lowestStockProduct, stockChartData };
-  }, [products]);
+      shortName: p.id,
+    })),
+    [products]
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -200,9 +157,9 @@ export function Statistics({ products, sales = [], orders = [] }) {
             <Package className="w-5 h-5 text-blue-500" />
           </div>
           <div className="h-64 w-full">
-            {stats.stockChartData.length > 0 ? (
+            {stockChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.stockChartData}>
+                <BarChart data={stockChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="shortName" tick={{ fontSize: 12 }} />
                   <YAxis />
@@ -213,7 +170,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
                     }} 
                   />
                   <Bar dataKey="stock" radius={[4, 4, 0, 0]}>
-                    {stats.stockChartData.map((entry, index) => (
+                    {stockChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.stock <= entry.minStock ? '#ef4444' : '#3b82f6'} />
                     ))}
                   </Bar>
@@ -228,62 +185,91 @@ export function Statistics({ products, sales = [], orders = [] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales by Category Chart */}
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Ventas por Categoría</h3>
-          <div className="h-64 w-full">
-            {stats.categoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.categoryData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {stats.categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+      {/* Financiero y categorías, los dos mandados por el mismo período */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h3 className="text-lg font-bold text-gray-800">Ventas del período</h3>
+          <FiltroPeriodo
+            anio={anio}
+            mes={mes}
+            porAnio={porAnio}
+            onChange={({ anio: a, mes: m, porAnio: pa }) => { setAnio(a); setMes(m); setPorAnio(pa); }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Costo vs ganancia, día a día o mes a mes */}
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Análisis Financiero (Ventas)</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {porAnio ? 'Mes a mes' : 'Día a día'} · {nombrePeriodo}
+            </p>
+            <div className="h-64 w-full">
+              {hayMovimiento ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={serie} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 11 }} width={70} tickFormatter={v => clp(v)} />
+                    <RechartsTooltip
+                      formatter={(valor, nombre) => [clp(valor), nombre]}
+                      labelFormatter={l => (porAnio ? l : `Día ${l}`)}
+                    />
+                    <Legend />
+                    <Line type="linear" dataKey="costo" stroke="#6366f1" strokeWidth={2} dot={false} activeDot={{ r: 6 }} name="Costo (Inversión)" />
+                    <Line type="linear" dataKey="ganancia" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 6 }} name="Ganancia Neta" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-center text-gray-400 text-sm px-4">
+                  No hubo ventas en {nombrePeriodo}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Cuánta plata y cuántas unidades por tipo de masa */}
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Ventas por Categoría</h3>
+            <p className="text-sm text-gray-500 mb-4">Cuánto se vendió de cada tipo · {nombrePeriodo}</p>
+
+            {porCategoria.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-center text-gray-400 text-sm px-4">
+                No hubo ventas en {nombrePeriodo}
+              </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                No hay datos de ventas suficientes
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="h-56 w-full md:w-1/2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={porCategoria} cx="50%" cy="50%" outerRadius={80} dataKey="total" nameKey="categoria">
+                        {porCategoria.map((entrada, i) => (
+                          <Cell key={entrada.categoria} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip formatter={(valor, nombre) => [clp(valor), nombre]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <ul className="w-full md:w-1/2 space-y-2">
+                  {porCategoria.map((c, i) => (
+                    <li key={c.categoria} className="flex items-center justify-between gap-3 border border-gray-100 rounded-md px-3 py-2">
+                      <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+                        {c.categoria}
+                      </span>
+                      <span className="text-sm whitespace-nowrap">
+                        <span className="font-bold text-gray-900">{clp(c.total)}</span>
+                        <span className="text-gray-500"> ({c.unidades} uds)</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
         </div>
-
-        {/* Profit Trend Chart */}
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Análisis Financiero (Ventas)</h3>
-          <div className="h-64 w-full">
-             {stats.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <RechartsTooltip formatter={(value) => [new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(value), '']} />
-                  <Legend />
-                  <Line type="monotone" dataKey="investment" stroke="#6366f1" strokeWidth={2} activeDot={{ r: 8 }} name="Costo (Inversión)" />
-                  <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} activeDot={{ r: 8 }} name="Ganancia Neta" />
-                </LineChart>
-              </ResponsiveContainer>
-             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                No hay datos de historial
-              </div>
-             )}
-          </div>
-        </div>
-
       </div>
     </div>
   );
