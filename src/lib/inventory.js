@@ -40,3 +40,19 @@ export function faltantesPorProducto(products) {
       unitsShort: -Number(p.stock),
     }));
 }
+
+// El `stock` que guardamos ya viene con las reservas descontadas: es el
+// DISPONIBLE. De ahí salen las otras dos vistas sin guardar nada nuevo.
+//   en máquina = lo que hay físicamente = disponible + reservado
+//   disponible = lo que puede vender hoy (negativo = lo que debe producir)
+export function vistaStock(product, unidadesReservadas = 0) {
+  const disponible = Number(product?.stock) || 0;
+  const reservado = Number(unidadesReservadas) || 0;
+  return { enMaquina: disponible + reservado, reservado, disponible };
+}
+
+// Conversión inversa, para cuando ella cuenta físicamente y escribe cuántas
+// masas hay en máquina: lo que se guarda es el disponible.
+export function disponibleDesdeMaquina(enMaquina, unidadesReservadas = 0) {
+  return (Number(enMaquina) || 0) - (Number(unidadesReservadas) || 0);
+}

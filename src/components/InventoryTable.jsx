@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
-import { generateSku, normalizeProductFields } from '../lib/inventory';
+import { generateSku, normalizeProductFields, vistaStock, disponibleDesdeMaquina } from '../lib/inventory';
 import { comprometidoPorProducto } from '../lib/pedidos';
 
 const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
@@ -59,7 +59,9 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
       isCocktail: product.isCocktail || false,
       category: product.category,
       unitsPerPackage: product.unitsPerPackage || '',
-      stock: product.stock,
+      // Ella cuenta lo que hay fisicamente, asi que el campo muestra el stock
+      // en maquina; al guardar se vuelve a convertir a disponible.
+      stock: vistaStock(product, comprometido[product.id]).enMaquina,
       minStock: product.minStock || '',
       price: product.price,
       cost: product.cost || ''
@@ -69,7 +71,11 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.centimetros || !formData.stock || !formData.price || !formData.unitsPerPackage) return;
+    // Se comprueba "vacío", no "falsy": un 0 es un valor válido y frecuente
+    // (tener 0 masas en máquina), y con `!formData.stock` el guardar no hacía
+    // nada y sin avisar.
+    const vacio = v => v === '' || v === null || v === undefined;
+    if (vacio(formData.centimetros) || vacio(formData.stock) || vacio(formData.price) || vacio(formData.unitsPerPackage)) return;
     
     // Generar nombre basado en la categoría, centímetros y unidades por paquete
     const cocktailText = formData.isCocktail ? " (Cóctel)" : "";
@@ -81,7 +87,11 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
     const base = normalizeProductFields({ ...formData, name: generatedName });
 
     if (editingId) {
-      onEditProduct(base);
+      // El campo trae el stock en maquina; lo que se guarda es el disponible.
+      onEditProduct({
+        ...base,
+        stock: disponibleDesdeMaquina(base.stock, comprometido[editingId])
+      });
     } else {
       onAddProduct({ ...base, id: generateSku(products, formData.category) });
     }
@@ -214,7 +224,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stock (Unidades)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock en máquina (Unidades)</label>
                 <input
                   type="number"
                   name="stock"
@@ -225,6 +235,17 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   min="0"
                   required
                 />
+                {editingId && comprometido[editingId] > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Contá lo que hay físicamente. De ahí se apartan{' '}
+                    <span className="font-medium text-amber-700">{comprometido[editingId]} unidades</span>{' '}
+                    ya comprometidas en pedidos, y quedan{' '}
+                    <span className="font-medium">
+                      {disponibleDesdeMaquina(formData.stock, comprometido[editingId])}
+                    </span>{' '}
+                    disponibles.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta</label>
@@ -349,23 +370,40 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={twMerge(
-                        "flex items-center text-sm font-medium",
-                        product.stock <= (product.minStock || 5) ? "text-red-600" : "text-green-600"
-                      )}>
-                        {product.stock}
-                        {product.stock <= (product.minStock || 5) && (
-                          <AlertTriangle className="ml-2 w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                      {product.stock <= (product.minStock || 5) && (
-                         <span className="text-xs text-red-500 block">Reordenar (Mín: {product.minStock || 5})</span>
-                      )}
-                      {comprometido[product.id] > 0 && (
-                        <span className="text-xs text-amber-700 block">
-                          {comprometido[product.id]} comprometidas en pedidos
-                        </span>
-                      )}
+                      {(() => {
+                        const v = vistaStock(product, comprometido[product.id]);
+                        const bajo = v.disponible <= (product.minStock || 5);
+
+                        return (
+                          <div className="text-sm space-y-0.5">
+                            <div className="text-gray-600">
+                              <span className="text-xs text-gray-500">En máquina:</span>{' '}
+                              <span className="font-medium">{v.enMaquina}</span>
+                            </div>
+                            <div className="text-gray-600">
+                              <span className="text-xs text-gray-500">Reservado:</span>{' '}
+                              <span className={v.reservado > 0 ? 'font-medium text-amber-700' : 'font-medium'}>
+                                {v.reservado}
+                              </span>
+                            </div>
+                            <div className={twMerge(
+                              'flex items-center font-bold',
+                              bajo ? 'text-red-600' : 'text-green-600'
+                            )}>
+                              <span className="text-xs font-normal text-gray-500 mr-1">Disponible:</span>
+                              {v.disponible}
+                              {bajo && <AlertTriangle className="ml-1 w-4 h-4 text-red-500" />}
+                            </div>
+                            {bajo && (
+                              <span className="text-xs text-red-500 block">
+                                {v.disponible < 0
+                                  ? `Faltan ${-v.disponible} por producir`
+                                  : `Reordenar (Mín: ${product.minStock || 5})`}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(product.price)}

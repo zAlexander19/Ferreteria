@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSku, applyProductEdit, normalizeProductFields, faltantesPorProducto } from './inventory';
+import { generateSku, applyProductEdit, normalizeProductFields, faltantesPorProducto, vistaStock, disponibleDesdeMaquina } from './inventory';
 
 describe('generateSku', () => {
   it('arranca en 001 cuando no hay productos de esa categoria', () => {
@@ -136,5 +136,51 @@ describe('faltantesPorProducto', () => {
 
   it('acepta una lista vacia', () => {
     expect(faltantesPorProducto([])).toEqual([]);
+  });
+});
+
+describe('vistaStock', () => {
+  it('el stock guardado es el disponible, y en maquina lo incluye mas lo reservado', () => {
+    expect(vistaStock({ stock: 250 }, 550)).toEqual({ enMaquina: 800, reservado: 550, disponible: 250 });
+  });
+
+  it('un producto con todo comprometido queda en 0 disponible', () => {
+    expect(vistaStock({ stock: 0 }, 75)).toEqual({ enMaquina: 75, reservado: 75, disponible: 0 });
+  });
+
+  it('un disponible negativo significa que no hay nada en maquina y se debe', () => {
+    expect(vistaStock({ stock: -75 }, 75)).toEqual({ enMaquina: 0, reservado: 75, disponible: -75 });
+  });
+
+  it('sin reservas, en maquina y disponible son lo mismo', () => {
+    expect(vistaStock({ stock: 620 })).toEqual({ enMaquina: 620, reservado: 0, disponible: 620 });
+  });
+
+  it('no rompe con stock ausente o no numerico', () => {
+    expect(vistaStock({}, 10)).toEqual({ enMaquina: 10, reservado: 10, disponible: 0 });
+    expect(vistaStock({ stock: null })).toEqual({ enMaquina: 0, reservado: 0, disponible: 0 });
+  });
+});
+
+describe('disponibleDesdeMaquina', () => {
+  it('descuenta lo reservado de lo que ella conto fisicamente', () => {
+    expect(disponibleDesdeMaquina(800, 550)).toBe(250);
+  });
+
+  it('da 0 cuando lo contado es exactamente lo comprometido', () => {
+    expect(disponibleDesdeMaquina(75, 75)).toBe(0);
+  });
+
+  it('da negativo cuando conto menos de lo que debe', () => {
+    expect(disponibleDesdeMaquina(0, 75)).toBe(-75);
+  });
+
+  it('sin reservas devuelve lo contado', () => {
+    expect(disponibleDesdeMaquina(100)).toBe(100);
+  });
+
+  it('es la inversa de vistaStock', () => {
+    const v = vistaStock({ stock: -40 }, 40);
+    expect(disponibleDesdeMaquina(v.enMaquina, v.reservado)).toBe(-40);
   });
 });
