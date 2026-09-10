@@ -7,6 +7,7 @@ import { RangoFechas } from './RangoFechas';
 import { SelectorFecha } from './SelectorFecha';
 import { SelectorHora } from './SelectorHora';
 import { EtiquetasProducto } from './EtiquetasProducto';
+import { mostrarFecha } from '../lib/fechas';
 
 const ESTADOS_FILTRO = ['Todos', 'Sin pagar', 'Abonado', 'Pagado'];
 const VISTA_GUARDADA = 'masas_vista_pedidos';
@@ -309,7 +310,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                               title="Tocá para ver el pedido completo"
                             >
                               <td className="px-4 py-3 whitespace-nowrap align-top">
-                                <div className="font-medium text-gray-800">{order.deliveryDate || 'Sin fecha'}</div>
+                                <div className="font-medium text-gray-800">{mostrarFecha(order.deliveryDate) || 'Sin fecha'}</div>
                                 <div className="text-xs text-gray-500">{order.deliveryTime || ''}</div>
                               </td>
                               <td className="px-4 py-3 align-top">

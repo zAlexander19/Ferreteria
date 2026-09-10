@@ -1,6 +1,7 @@
 import { CalendarClock, Trash2, CheckCircle, Clock, X, User, AlertTriangle, Pencil } from 'lucide-react';
 import { EtiquetasProducto } from './EtiquetasProducto';
 import { unidadesDeItem, unidadesTotales, saldoPendiente } from '../lib/pedidos';
+import { mostrarFecha } from '../lib/fechas';
 
 const clp = valor => (Number(valor) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
@@ -76,7 +77,7 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
         </div>
         <div className="flex items-center gap-2 text-gray-600 mb-1 text-sm">
           <CalendarClock className="w-4 h-4 text-gray-400" />
-          Fecha: {order.deliveryDate || 'No especificada'}
+          Fecha: {mostrarFecha(order.deliveryDate) || 'No especificada'}
         </div>
         <div className="flex items-center gap-2 text-gray-600 mb-4 text-sm">
           <Clock className="w-4 h-4 text-gray-400" />
