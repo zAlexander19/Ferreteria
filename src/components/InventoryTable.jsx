@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Trash2, AlertTriangle, Package, Plus, Search, X, Filter, Pencil } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { generateSku, normalizeProductFields } from '../lib/inventory';
+import { comprometidoPorProducto } from '../lib/pedidos';
 
 const CATEGORIES = ["Freir", "Horno", "Sopaipillas"];
 
-export function InventoryTable({ products, onAddProduct, onEditProduct, onDeleteProduct }) {
+export function InventoryTable({ products, orders = [], onAddProduct, onEditProduct, onDeleteProduct }) {
+  // Unidades ya apartadas para pedidos pendientes. Sin esto, un producto en 0
+  // porque todo esta comprometido se ve igual que uno en 0 y libre.
+  const comprometido = useMemo(() => comprometidoPorProducto(orders), [orders]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -355,7 +359,12 @@ export function InventoryTable({ products, onAddProduct, onEditProduct, onDelete
                         )}
                       </div>
                       {product.stock <= (product.minStock || 5) && (
-                         <span className="text-xs text-red-500">Reordenar (Mín: {product.minStock || 5})</span>
+                         <span className="text-xs text-red-500 block">Reordenar (Mín: {product.minStock || 5})</span>
+                      )}
+                      {comprometido[product.id] > 0 && (
+                        <span className="text-xs text-amber-700 block">
+                          {comprometido[product.id]} comprometidas en pedidos
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { unidadesDeItem, unidadesTotales, deltaReserva, saldoPendiente } from './pedidos';
+import { unidadesDeItem, unidadesTotales, deltaReserva, saldoPendiente, comprometidoPorProducto } from './pedidos';
 
 describe('unidadesDeItem', () => {
   it('multiplica bolsas por unidades por bolsa', () => {
@@ -92,5 +92,51 @@ describe('saldoPendiente', () => {
 
   it('trata un pedido viejo sin estado de pago como sin pagar', () => {
     expect(saldoPendiente({ total: 5000 })).toBe(5000);
+  });
+});
+
+describe('comprometidoPorProducto', () => {
+  const pedido = (status, items, stockReserved = true) => ({
+    status,
+    stockReserved,
+    reservationBreakdown: items
+  });
+
+  it('suma lo reservado por los pedidos pendientes', () => {
+    const orders = [
+      pedido('Pendiente', [{ productId: 'HOR-002', unitsReserved: 75 }]),
+      pedido('Pendiente', [{ productId: 'HOR-002', unitsReserved: 25 }]),
+    ];
+    expect(comprometidoPorProducto(orders)).toEqual({ 'HOR-002': 100 });
+  });
+
+  it('ignora los pedidos cancelados', () => {
+    const orders = [
+      pedido('Pendiente', [{ productId: 'A', unitsReserved: 10 }]),
+      pedido('Cancelado', [{ productId: 'A', unitsReserved: 50 }], false),
+    ];
+    expect(comprometidoPorProducto(orders)).toEqual({ A: 10 });
+  });
+
+  it('ignora los pedidos completados porque ya se entregaron', () => {
+    const orders = [
+      pedido('Pendiente', [{ productId: 'A', unitsReserved: 10 }]),
+      pedido('Completado', [{ productId: 'A', unitsReserved: 40 }]),
+    ];
+    expect(comprometidoPorProducto(orders)).toEqual({ A: 10 });
+  });
+
+  it('separa por producto dentro de un mismo pedido', () => {
+    const orders = [pedido('Pendiente', [
+      { productId: 'HOR-002', unitsReserved: 75 },
+      { productId: 'FRE-002', unitsReserved: 75 },
+    ])];
+    expect(comprometidoPorProducto(orders)).toEqual({ 'HOR-002': 75, 'FRE-002': 75 });
+  });
+
+  it('no rompe con pedidos sin reservationBreakdown ni con lista vacia', () => {
+    expect(comprometidoPorProducto([{ status: 'Pendiente' }])).toEqual({});
+    expect(comprometidoPorProducto([])).toEqual({});
+    expect(comprometidoPorProducto(undefined)).toEqual({});
   });
 });

@@ -733,6 +733,7 @@ function App() {
           {activeTab === 'inventory' ? (
             <InventoryTable 
               products={products} 
+              orders={orders}
               onAddProduct={handleAddProduct}
               onEditProduct={handleEditProduct}
               onDeleteProduct={handleDeleteProduct}
@@ -754,6 +755,7 @@ function App() {
           ) : activeTab === 'production' ? (
             <Production
               products={products}
+              orders={orders}
               productions={productions}
               onRegisterProduction={handleRegisterProduction}
             />

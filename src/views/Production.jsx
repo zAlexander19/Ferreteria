@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Factory, Package, User, Layers3, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
-import { faltantesPorProducto } from '../lib/inventory';
+import { comprometidoPorProducto } from '../lib/pedidos';
 
 const createEmptyLine = () => ({
   productId: '',
@@ -40,8 +40,21 @@ const getCategoryBadgeClass = (category) => {
   return 'bg-slate-100 text-slate-700 border border-slate-200';
 };
 
-export function Production({ products, productions = [], onRegisterProduction }) {
-  const faltantes = useMemo(() => faltantesPorProducto(products), [products]);
+export function Production({ products, orders = [], productions = [], onRegisterProduction }) {
+  // Se listan los que no tienen stock libre, no solo los negativos. Un producto
+  // en 0 con 75 unidades apartadas para un pedido no aparecia acá, y eso hacia
+  // pensar que el pedido no se habia descontado.
+  const pendientes = useMemo(() => {
+    const comprometido = comprometidoPorProducto(orders);
+    return products
+      .filter(p => Number(p.stock) < 0 || (Number(p.stock) === 0 && comprometido[p.id] > 0))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        unitsShort: Math.max(0, -Number(p.stock)),
+        comprometido: comprometido[p.id] || 0,
+      }));
+  }, [products, orders]);
   const [operatorName, setOperatorName] = useState('');
   const [lines, setLines] = useState([createEmptyLine()]);
 
@@ -132,21 +145,28 @@ export function Production({ products, productions = [], onRegisterProduction })
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {faltantes.length > 0 && (
+      {pendientes.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 sm:p-6">
           <h3 className="text-lg font-bold text-orange-900 flex items-center gap-2 mb-1">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            Falta producir para los pedidos agendados
+            Pendiente para los pedidos agendados
           </h3>
           <p className="text-sm text-orange-800 mb-3">
-            Estas unidades ya están comprometidas en pedidos y todavía no se fabricaron.
+            Productos sin stock libre. Los que están en rojo hay que fabricarlos.
           </p>
           <ul className="space-y-1">
-            {faltantes.map(f => (
-              <li key={f.id} className="flex justify-between items-center bg-white rounded-md border border-orange-100 px-3 py-2">
-                <span className="text-sm font-medium text-gray-800">{f.name}</span>
-                <span className="text-sm font-bold text-orange-700 whitespace-nowrap">
-                  {f.unitsShort} unidades
+            {pendientes.map(p => (
+              <li key={p.id} className="flex flex-wrap justify-between items-center gap-2 bg-white rounded-md border border-orange-100 px-3 py-2">
+                <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                <span className="text-sm whitespace-nowrap">
+                  {p.unitsShort > 0 ? (
+                    <span className="font-bold text-red-700">Faltan {p.unitsShort} unidades</span>
+                  ) : (
+                    <span className="font-semibold text-amber-700">Sin stock libre</span>
+                  )}
+                  {p.comprometido > 0 && (
+                    <span className="text-gray-500"> · {p.comprometido} comprometidas</span>
+                  )}
                 </span>
               </li>
             ))}

@@ -44,3 +44,20 @@ export function saldoPendiente(order) {
 
   return Math.max(0, (Number(order?.total) || 0) - abonado);
 }
+
+// Cuántas unidades de cada producto están apartadas para pedidos que todavía
+// no se entregaron. Solo cuentan los Pendientes: un Cancelado ya devolvió su
+// stock y un Completado ya salió por la puerta.
+// Sirve para distinguir dos cosas que hoy se ven igual: un producto en 0 y
+// libre, de uno en 0 porque todo lo que había está comprometido.
+export function comprometidoPorProducto(orders) {
+  return (orders || [])
+    .filter(order => order.status === 'Pendiente' && order.stockReserved !== false)
+    .reduce((acc, order) => {
+      (order.reservationBreakdown || []).forEach(reserva => {
+        const unidades = Number(reserva.unitsReserved) || 0;
+        if (unidades > 0) acc[reserva.productId] = (acc[reserva.productId] || 0) + unidades;
+      });
+      return acc;
+    }, {});
+}
