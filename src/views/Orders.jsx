@@ -340,7 +340,19 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                                 </ul>
                               </td>
                               <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700 align-top">
-                                <span className="h-6 inline-flex items-center">{unidadesTotales(order.items)}</span>
+                                <ul className="space-y-1">
+                                  {order.items.map(item => (
+                                    <li key={item.id} className="h-6 flex items-center justify-end">
+                                      <span className="font-semibold text-gray-800">{unidadesDeItem(item)}</span>
+                                      <span className="text-gray-500 ml-1">uds</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {order.items.length > 1 && (
+                                  <div className="mt-1 pt-1 border-t border-gray-200 text-xs text-gray-500">
+                                    Total {unidadesTotales(order.items)} uds
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-gray-800 align-top">
                                 <span className="h-6 inline-flex items-center">{clp(order.total)}</span>
