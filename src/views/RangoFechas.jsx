@@ -1,43 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { DayPicker } from 'react-day-picker';
 import { es } from 'react-day-picker/locale';
 import { CalendarRange, X } from 'lucide-react';
+import { aTexto, aFecha, mostrarFecha } from '../lib/fechas';
+import { usePopover } from './usePopover';
 import 'react-day-picker/style.css';
 
-// Las fechas de los pedidos se guardan como 'YYYY-MM-DD'. Se convierte a mano
-// y no con toISOString(), que pasa por UTC y en Chile devuelve el día anterior.
-const aTexto = fecha => {
-  if (!fecha) return '';
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-  const dia = String(fecha.getDate()).padStart(2, '0');
-  return `${fecha.getFullYear()}-${mes}-${dia}`;
-};
-
-const aFecha = texto => {
-  if (!texto) return undefined;
-  const [a, m, d] = texto.split('-').map(Number);
-  return new Date(a, m - 1, d);
-};
-
-const mostrar = texto => {
-  if (!texto) return '';
-  const [a, m, d] = texto.split('-');
-  return `${d}/${m}/${a}`;
-};
-
 export function RangoFechas({ desde, hasta, onChange }) {
-  const [abierto, setAbierto] = useState(false);
-  const contenedor = useRef(null);
-
-  // Cerrar al hacer clic afuera: si no, el calendario queda tapando la lista.
-  useEffect(() => {
-    if (!abierto) return;
-    const alClic = e => {
-      if (contenedor.current && !contenedor.current.contains(e.target)) setAbierto(false);
-    };
-    document.addEventListener('mousedown', alClic);
-    return () => document.removeEventListener('mousedown', alClic);
-  }, [abierto]);
+  const { abierto, setAbierto, disparador, panel, posicion } = usePopover();
 
   const rango = { from: aFecha(desde), to: aFecha(hasta) };
   const hayRango = Boolean(desde || hasta);
@@ -45,40 +15,44 @@ export function RangoFechas({ desde, hasta, onChange }) {
   const etiqueta = !hayRango
     ? 'Filtrar por fecha'
     : desde && hasta
-      ? `${mostrar(desde)} — ${mostrar(hasta)}`
+      ? `${mostrarFecha(desde)} — ${mostrarFecha(hasta)}`
       : desde
-        ? `Desde ${mostrar(desde)}`
-        : `Hasta ${mostrar(hasta)}`;
+        ? `Desde ${mostrarFecha(desde)}`
+        : `Hasta ${mostrarFecha(hasta)}`;
 
   return (
-    <div className="relative" ref={contenedor}>
-      <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1">
+      <button
+        ref={disparador}
+        type="button"
+        onClick={() => setAbierto(a => !a)}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+          hayRango
+            ? 'bg-blue-50 border-blue-300 text-blue-800'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        }`}
+      >
+        <CalendarRange className="w-4 h-4" />
+        {etiqueta}
+      </button>
+
+      {hayRango && (
         <button
           type="button"
-          onClick={() => setAbierto(a => !a)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-            hayRango
-              ? 'bg-blue-50 border-blue-300 text-blue-800'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
+          onClick={() => { onChange({ desde: '', hasta: '' }); setAbierto(false); }}
+          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+          title="Quitar filtro de fecha"
         >
-          <CalendarRange className="w-4 h-4" />
-          {etiqueta}
+          <X className="w-4 h-4" />
         </button>
-        {hayRango && (
-          <button
-            type="button"
-            onClick={() => { onChange({ desde: '', hasta: '' }); setAbierto(false); }}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
-            title="Quitar filtro de fecha"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      )}
 
-      {abierto && (
-        <div className="absolute right-0 z-30 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3">
+      {abierto && createPortal(
+        <div
+          ref={panel}
+          style={{ position: 'fixed', top: posicion.top, left: posicion.left }}
+          className="z-[60] bg-white border border-gray-200 rounded-lg shadow-xl p-3"
+        >
           <p className="text-xs text-gray-500 mb-2 px-1">
             Tocá el primer día y después el último. El período queda marcado.
           </p>
@@ -106,7 +80,8 @@ export function RangoFechas({ desde, hasta, onChange }) {
               Listo
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

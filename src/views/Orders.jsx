@@ -4,6 +4,8 @@ import { faltantesPorProducto } from '../lib/inventory';
 import { unidadesDeItem, unidadesTotales, agruparPorEstado, filtrarPedidos, saldoPendiente } from '../lib/pedidos';
 import { OrderCard } from './OrderCard';
 import { RangoFechas } from './RangoFechas';
+import { SelectorFecha } from './SelectorFecha';
+import { SelectorHora } from './SelectorHora';
 import { EtiquetasProducto } from './EtiquetasProducto';
 
 const ESTADOS_FILTRO = ['Todos', 'Sin pagar', 'Abonado', 'Pagado'];
@@ -138,6 +140,11 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.deliveryDate) {
+      alert('Elegí la fecha de entrega del pedido');
+      return;
+    }
+
     if (cart.length === 0) {
       alert('Debes agregar al menos un producto al pedido');
       return;
@@ -409,28 +416,14 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Entrega</label>
-                      <input
-                        type="date"
-                        name="deliveryDate"
-                        value={formData.deliveryDate}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Entrega</label>
-                      <input
-                        type="time"
-                        name="deliveryTime"
-                        value={formData.deliveryTime}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
+                    <SelectorFecha
+                      value={formData.deliveryDate}
+                      onChange={v => setFormData(prev => ({ ...prev, deliveryDate: v }))}
+                    />
+                    <SelectorHora
+                      value={formData.deliveryTime}
+                      onChange={v => setFormData(prev => ({ ...prev, deliveryTime: v }))}
+                    />
                   </div>
 
                   <div className="border-t border-gray-100 pt-4">
