@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle } from 'lucide-react';
+import { EtiquetasProducto } from './EtiquetasProducto';
 import { unidadesDeItem, unidadesTotales } from '../lib/pedidos';
 
 export function Sales({ products, onCompleteSale }) {
@@ -114,6 +115,7 @@ export function Sales({ products, onCompleteSale }) {
                   >
                     <div className="min-w-0">
                       <div className="font-medium text-gray-800">{product.name}</div>
+                      <EtiquetasProducto product={product} className="my-1" />
                       <div className="text-xs text-gray-500">
                         SKU: {product.id} | Stock (Unidades): {stock} | Equivale a: {Math.max(0, Math.floor(stock / unitsPerBag))} bolsas posibles
                       </div>

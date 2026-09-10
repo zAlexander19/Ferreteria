@@ -1,15 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CalendarClock, Plus, Search, Trash2, X, ShoppingCart, Pencil, Filter } from 'lucide-react';
+import { CalendarClock, Plus, Search, Trash2, X, ShoppingCart, Pencil, LayoutGrid, List, Wallet } from 'lucide-react';
 import { faltantesPorProducto } from '../lib/inventory';
-import { unidadesDeItem, unidadesTotales } from '../lib/pedidos';
+import { unidadesDeItem, unidadesTotales, agruparPorEstado, filtrarPedidos, saldoPendiente } from '../lib/pedidos';
 import { OrderCard } from './OrderCard';
+import { RangoFechas } from './RangoFechas';
+import { EtiquetasProducto } from './EtiquetasProducto';
+
+const ESTADOS_FILTRO = ['Todos', 'Sin pagar', 'Abonado', 'Pagado'];
+const VISTA_GUARDADA = 'masas_vista_pedidos';
+
+const SECCIONES = [
+  { clave: 'pendientes', titulo: 'Pendientes', color: 'text-blue-700' },
+  { clave: 'completados', titulo: 'Completados', color: 'text-green-700' },
+  { clave: 'cancelados', titulo: 'Cancelados', color: 'text-red-700' },
+];
 
 const ESTADOS_PAGO = ['Sin pagar', 'Abonado', 'Pagado'];
 
 const FORM_VACIO = {
   customerName: '',
   deliveryDate: '',
-  deliveryTime: '',
+  deliveryTime: '12:00',
   phone: '',
   paymentStatus: 'Sin pagar',
   paidAmount: ''
@@ -29,19 +40,24 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
 
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [estadoPago, setEstadoPago] = useState('Todos');
+  const [vista, setVista] = useState(() => localStorage.getItem(VISTA_GUARDADA) || 'tarjeta');
+  const [pedidoAbierto, setPedidoAbierto] = useState(null);
 
-  // Las fechas se guardan como 'YYYY-MM-DD', así que comparar como texto
-  // ordena igual que comparar como fecha, sin líos de zona horaria.
-  const pedidosFiltrados = useMemo(() => {
-    return orders.filter(order => {
-      const fecha = order.deliveryDate || '';
-      if (desde && (!fecha || fecha < desde)) return false;
-      if (hasta && (!fecha || fecha > hasta)) return false;
-      return true;
-    });
-  }, [orders, desde, hasta]);
+  useEffect(() => { localStorage.setItem(VISTA_GUARDADA, vista); }, [vista]);
 
-  const hayFiltro = Boolean(desde || hasta);
+  const pedidosFiltrados = useMemo(
+    () => filtrarPedidos(orders, { desde, hasta, estadoPago }),
+    [orders, desde, hasta, estadoPago]
+  );
+
+  const secciones = useMemo(() => agruparPorEstado(pedidosFiltrados), [pedidosFiltrados]);
+  const hayFiltro = Boolean(desde || hasta || estadoPago !== 'Todos');
+
+  const siguienteEstadoPago = () => {
+    const i = ESTADOS_FILTRO.indexOf(estadoPago);
+    setEstadoPago(ESTADOS_FILTRO[(i + 1) % ESTADOS_FILTRO.length]);
+  };
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -168,7 +184,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
   return (
     <div className="flex flex-col h-full gap-4 sm:gap-6">
       {/* Controles */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <button
           onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
@@ -177,36 +193,46 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
           Nuevo Pedido
         </button>
 
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 w-full lg:w-auto">
-          <div className="flex items-center gap-2 text-sm text-gray-600 sm:hidden">
-            <Filter className="w-4 h-4" /> Filtrar por fecha de entrega
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
-            <input
-              type="date"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
-            <input
-              type="date"
-              value={hasta}
-              onChange={(e) => setHasta(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {hayFiltro && (
+        <div className="flex flex-wrap items-center gap-3">
+          <RangoFechas
+            desde={desde}
+            hasta={hasta}
+            onChange={({ desde: d, hasta: h }) => { setDesde(d); setHasta(h); }}
+          />
+
+          <button
+            type="button"
+            onClick={siguienteEstadoPago}
+            title="Tocá para cambiar el filtro de pago"
+            className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+              estadoPago === 'Todos' ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                : estadoPago === 'Pagado' ? 'bg-green-50 border-green-300 text-green-800'
+                : estadoPago === 'Abonado' ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-red-50 border-red-300 text-red-800'
+            }`}
+          >
+            <Wallet className="w-4 h-4" />
+            Pago: {estadoPago}
+          </button>
+
+          <div className="flex rounded-md border border-gray-300 overflow-hidden">
             <button
-              onClick={() => { setDesde(''); setHasta(''); }}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              type="button"
+              onClick={() => setVista('tarjeta')}
+              title="Ver en tarjetas"
+              className={`p-2 ${vista === 'tarjeta' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
-              Limpiar filtro
+              <LayoutGrid className="w-4 h-4" />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setVista('lista')}
+              title="Ver en lista"
+              className={`p-2 border-l border-gray-300 ${vista === 'lista' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -216,30 +242,132 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
         </div>
       )}
 
-      {/* Lista */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-        {pedidosFiltrados.length === 0 ? (
-          <div className="col-span-full p-10 text-center text-gray-500 bg-white rounded-lg border border-gray-100 shadow-sm">
-            <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg">
-              {orders.length === 0
-                ? 'No hay pedidos registrados'
-                : 'No hay pedidos para esas fechas'}
-            </p>
-          </div>
-        ) : (
-          pedidosFiltrados.map(order => (
+      {pedidosFiltrados.length === 0 ? (
+        <div className="p-10 text-center text-gray-500 bg-white rounded-lg border border-gray-100 shadow-sm">
+          <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="text-lg">
+            {orders.length === 0 ? 'No hay pedidos registrados' : 'No hay pedidos con esos filtros'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {SECCIONES.map(({ clave, titulo, color }) => {
+            const lista = secciones[clave];
+            if (lista.length === 0) return null;
+
+            return (
+              <section key={clave}>
+                <h3 className={`text-sm font-bold uppercase tracking-wide mb-3 flex items-center gap-2 ${color}`}>
+                  {titulo}
+                  <span className="text-xs font-semibold bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
+                    {lista.length}
+                  </span>
+                </h3>
+
+                {vista === 'tarjeta' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    {lista.map(order => (
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        faltantes={faltantes}
+                        onEdit={openEditModal}
+                        onUpdateOrderStatus={onUpdateOrderStatus}
+                        onDeleteOrder={onDeleteOrder}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr className="text-left text-xs uppercase text-gray-500">
+                          <th className="px-4 py-2">Entrega</th>
+                          <th className="px-4 py-2">Cliente</th>
+                          <th className="px-4 py-2">Productos</th>
+                          <th className="px-4 py-2 text-right">Unidades</th>
+                          <th className="px-4 py-2 text-right">Total</th>
+                          <th className="px-4 py-2">Pago</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {lista.map(order => {
+                          const pago = order.paymentStatus || 'Sin pagar';
+                          return (
+                            <tr
+                              key={order.id}
+                              onClick={() => setPedidoAbierto(order)}
+                              className="hover:bg-blue-50 cursor-pointer"
+                              title="Tocá para ver el pedido completo"
+                            >
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="font-medium text-gray-800">{order.deliveryDate || 'Sin fecha'}</div>
+                                <div className="text-xs text-gray-500">{order.deliveryTime || ''}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-gray-800">{order.customerName}</div>
+                                <div className="text-xs text-gray-500">{order.id}</div>
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">
+                                {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700">
+                                {unidadesTotales(order.items)}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-gray-800">
+                                {clp(order.total)}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  pago === 'Pagado' ? 'bg-green-100 text-green-800'
+                                    : pago === 'Abonado' ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {pago}
+                                </span>
+                                {pago === 'Abonado' && (
+                                  <div className="text-xs text-amber-700 mt-0.5">Falta {clp(saldoPendiente(order))}</div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tarjeta en popup, al tocar una fila de la lista */}
+      {pedidoAbierto && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={() => setPedidoAbierto(null)}
+        >
+          <div className="w-full max-w-md my-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setPedidoAbierto(null)}
+                className="p-2 bg-white rounded-full text-gray-500 hover:text-gray-800 shadow"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <OrderCard
-              key={order.id}
-              order={order}
+              order={pedidoAbierto}
               faltantes={faltantes}
-              onEdit={openEditModal}
-              onUpdateOrderStatus={onUpdateOrderStatus}
-              onDeleteOrder={onDeleteOrder}
+              onEdit={(o) => { setPedidoAbierto(null); openEditModal(o); }}
+              onUpdateOrderStatus={(id, st) => { onUpdateOrderStatus(id, st); setPedidoAbierto(null); }}
+              onDeleteOrder={(id) => { onDeleteOrder(id); setPedidoAbierto(null); }}
             />
-          ))
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
@@ -376,7 +504,8 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                           >
                             <span className="min-w-0">
                               <span className="font-medium block truncate">{product.name}</span>
-                              <span className="text-xs text-gray-500">
+                              <EtiquetasProducto product={product} className="my-1" />
+                              <span className="text-xs text-gray-500 block">
                                 {parseInt(product.unitsPerPackage) || 1} unidades por bolsa
                               </span>
                             </span>

@@ -61,3 +61,45 @@ export function comprometidoPorProducto(orders) {
       return acc;
     }, {});
 }
+
+// Del más próximo al más lejano. Las fechas son 'YYYY-MM-DD' y las horas
+// 'HH:MM', así que comparar como texto ordena igual que comparar como fecha.
+// Los que no tienen fecha van al final: no se sabe cuándo hay que entregarlos.
+export function ordenarPorEntrega(orders) {
+  return [...(orders || [])].sort((a, b) => {
+    const fa = a.deliveryDate || '';
+    const fb = b.deliveryDate || '';
+    if (!fa && !fb) return 0;
+    if (!fa) return 1;
+    if (!fb) return -1;
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    return (a.deliveryTime || '').localeCompare(b.deliveryTime || '');
+  });
+}
+
+// Tres secciones, cada una ya ordenada por fecha de entrega.
+export function agruparPorEstado(orders) {
+  const ordenados = ordenarPorEntrega(orders);
+  return {
+    pendientes: ordenados.filter(o => o.status === 'Pendiente'),
+    completados: ordenados.filter(o => o.status === 'Completado'),
+    cancelados: ordenados.filter(o => o.status === 'Cancelado'),
+  };
+}
+
+export function filtrarPedidos(orders, { desde, hasta, estadoPago } = {}) {
+  return (orders || []).filter(order => {
+    const fecha = order.deliveryDate || '';
+
+    if (desde && (!fecha || fecha < desde)) return false;
+    if (hasta && (!fecha || fecha > hasta)) return false;
+
+    if (estadoPago && estadoPago !== 'Todos') {
+      // Los pedidos creados antes de que existiera el campo cuentan como sin pagar.
+      const pago = order.paymentStatus || 'Sin pagar';
+      if (pago !== estadoPago) return false;
+    }
+
+    return true;
+  });
+}
