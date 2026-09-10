@@ -286,7 +286,60 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+                  <>
+                    {/* En celular la lista son filas compactas; la tabla vuelve desde md. */}
+                    <ul className="space-y-2 md:hidden">
+                      {lista.map(order => {
+                        const pago = order.paymentStatus || 'Sin pagar';
+                        return (
+                          <li key={order.id}>
+                            <button
+                              onClick={() => setPedidoAbierto(order)}
+                              className="w-full text-left bg-white rounded-lg border border-gray-200 shadow-sm p-3 active:bg-blue-50"
+                            >
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-800 truncate">{order.customerName}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {mostrarFecha(order.deliveryDate) || 'Sin fecha'} {order.deliveryTime || ''}
+                                  </div>
+                                </div>
+                                <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  pago === 'Pagado' ? 'bg-green-100 text-green-800'
+                                    : pago === 'Abonado' ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {pago}
+                                </span>
+                              </div>
+
+                              <ul className="mt-2 space-y-1">
+                                {order.items.map(item => (
+                                  <li key={item.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <EtiquetasProducto product={item} />
+                                    <span className="text-xs text-gray-600 whitespace-nowrap">
+                                      {item.quantity} {item.quantity === 1 ? 'bolsa' : 'bolsas'} = {unidadesDeItem(item)} uds
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+
+                              <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                                <span className="text-xs text-gray-500">
+                                  {unidadesTotales(order.items)} uds en total
+                                </span>
+                                <span className="font-bold text-gray-900">{clp(order.total)}</span>
+                              </div>
+                              {pago === 'Abonado' && (
+                                <div className="text-xs text-amber-700 mt-1">Falta {clp(saldoPendiente(order))}</div>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    <div className="hidden md:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
                         <tr className="text-left text-xs uppercase text-gray-500">
@@ -375,7 +428,8 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                         })}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </section>
             );
@@ -412,8 +466,8 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
             <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 {editingId ? <Pencil className="w-5 h-5 text-blue-600" /> : <CalendarClock className="w-5 h-5 text-blue-600" />}
@@ -424,9 +478,9 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               </button>
             </div>
 
-            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
               {/* Datos */}
-              <div className="w-full md:w-1/2 p-4 sm:p-6 border-r border-gray-100 overflow-y-auto">
+              <div className="w-full md:w-1/2 p-4 sm:p-6 md:border-r border-gray-100 md:overflow-y-auto">
                 <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente</label>
@@ -506,7 +560,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               </div>
 
               {/* Carrito */}
-              <div className="w-full md:w-1/2 flex flex-col bg-gray-50 h-full overflow-hidden">
+              <div className="w-full md:w-1/2 flex flex-col bg-gray-50 md:h-full md:overflow-hidden">
                 <div className="p-4 border-b border-gray-200 bg-white">
                   <label className="block text-sm font-bold text-gray-700 mb-2">Agregar Productos (Bolsas)</label>
                   <div className="relative">
@@ -544,9 +598,9 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 md:overflow-y-auto p-4 space-y-2">
                   {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="min-h-[8rem] h-full flex flex-col items-center justify-center text-gray-400">
                       <ShoppingCart className="w-10 h-10 mb-2 opacity-50" />
                       <p className="text-sm">No hay productos en el pedido</p>
                     </div>

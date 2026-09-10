@@ -1,32 +1,29 @@
 import { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
-import { ShoppingCart, Filter, Package } from 'lucide-react';
+import { ShoppingCart, Package } from 'lucide-react';
 import { RangoFechas } from './RangoFechas';
+import { ListaVentas, ModalVentas } from './ListaVentas';
+import { ventasUnificadas, totalPorOrigen, filtrarVentas, PUNTO_DE_VENTA, PEDIDO } from '../lib/ventas';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-export function Statistics({ products, sales = [] }) {
+const COLOR_ORIGEN = { [PUNTO_DE_VENTA]: '#2563eb', [PEDIDO]: '#9333ea' };
+
+const clp = v => (Number(v) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
+
+export function Statistics({ products, sales = [], orders = [] }) {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [modalVentas, setModalVentas] = useState(false);
 
-  const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(products.map(p => p.category).filter(Boolean)));
-  }, [products]);
+  // Una venta es lo del mostrador mas los pedidos completados Y pagados.
+  const ventas = useMemo(() => ventasUnificadas(sales, orders), [sales, orders]);
+  const ventasFiltradas = useMemo(() => filtrarVentas(ventas, { desde, hasta }), [ventas, desde, hasta]);
+  const ultimasVentas = useMemo(() => ventas.slice(0, 10), [ventas]);
+  const porOrigen = useMemo(() => totalPorOrigen(ventas), [ventas]);
+  const totalVendido = useMemo(() => ventas.reduce((s, v) => s + v.total, 0), [ventas]);
+  const totalFiltrado = useMemo(() => ventasFiltradas.reduce((s, v) => s + v.total, 0), [ventasFiltradas]);
 
-  const filteredSales = useMemo(() => {
-    let result = [...sales];
-
-    // `date` es un ISO completo ('2026-09-10T14:33:00.000Z'); alcanza con
-    // comparar los primeros 10 caracteres contra 'YYYY-MM-DD'.
-    if (desde) result = result.filter(s => (s.date || '').slice(0, 10) >= desde);
-    if (hasta) result = result.filter(s => (s.date || '').slice(0, 10) <= hasta);
-
-    if (categoryFilter) {
-      result = result.filter(s => s.items.some(item => item.category === categoryFilter));
-    }
-    return result.reverse(); // Más recientes primero
-  }, [sales, desde, hasta, categoryFilter]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -112,95 +109,86 @@ export function Statistics({ products, sales = [] }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Tabla de Ventas Realizadas */}
+      {/* Últimas ventas: mostrador + pedidos completados y pagados */}
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
-            Ventas Realizadas
+            Últimas ventas
           </h3>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
-            <Filter className="w-5 h-5 text-gray-400" />
-            
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              title="Filtrar por categoría"
-            >
-              <option value="">Todas las categorías</option>
-              {uniqueCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+          <div className="text-sm text-gray-600">
+            <span className="font-semibold">{ventas.length}</span> en total ·{' '}
+            <span className="font-bold text-blue-700">{clp(totalVendido)}</span>
+          </div>
+        </div>
 
+        <ListaVentas ventas={ultimasVentas} />
+
+        {ventas.length > 0 && (
+          <button
+            onClick={() => setModalVentas(true)}
+            className="mt-4 w-full sm:w-auto px-4 py-2 border border-blue-300 text-blue-700 font-medium rounded-md hover:bg-blue-50 transition-colors"
+          >
+            Ver todas las ventas ({ventas.length})
+          </button>
+        )}
+      </div>
+
+      {modalVentas && (
+        <ModalVentas
+          ventas={ventasFiltradas}
+          total={totalFiltrado}
+          onClose={() => setModalVentas(false)}
+          filtro={
             <RangoFechas
               desde={desde}
               hasta={hasta}
               onChange={({ desde: d, hasta: h }) => { setDesde(d); setHasta(h); }}
             />
+          }
+        />
+      )}
 
-            {(desde || hasta || categoryFilter) && (
-              <button 
-                onClick={() => { setDesde(''); setHasta(''); setCategoryFilter(''); }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
-              >
-                Limpiar filtros
-              </button>
-            )}
+      {/* Mostrador vs Pedidos */}
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-800 mb-1">Mostrador vs Pedidos</h3>
+        <p className="text-sm text-gray-500 mb-4">Cuánto se vendió por cada canal.</p>
+
+        {totalVendido === 0 ? (
+          <div className="h-56 flex items-center justify-center text-gray-400 text-sm">
+            Todavía no hay ventas registradas
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="h-56 w-full md:w-1/2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={porOrigen} cx="50%" cy="50%" outerRadius={80} dataKey="total" nameKey="origen">
+                    {porOrigen.map((entry) => (
+                      <Cell key={entry.origen} fill={COLOR_ORIGEN[entry.origen]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip formatter={(valor, nombre) => [clp(valor), nombre]} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
-        <div className="overflow-x-auto max-h-80 overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-10">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Venta</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha / Hora</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Productos Vendidos</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredSales.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-gray-500 bg-gray-50">
-                    No hay ventas registradas para este filtro.
-                  </td>
-                </tr>
-              ) : (
-                filteredSales.map(sale => (
-                  <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {sale.id}
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(sale.date).toLocaleString('es-CL')}
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-500">
-                      <ul className="list-disc list-inside">
-                        {sale.items.map((item, idx) => (
-                          <li key={idx}>
-                            {item.quantity}x {item.name || item.id}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
-                      {sale.total.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-sm font-medium text-gray-600">
-           <span>Total de ventas mostradas: {filteredSales.length}</span>
-            <span className="text-base sm:text-lg text-blue-700 break-all">
-             Total Recaudado: {filteredSales.reduce((acc, curr) => acc + curr.total, 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
-           </span>
-        </div>
+            <ul className="w-full md:w-1/2 space-y-2">
+              {porOrigen.map(o => (
+                <li key={o.origen} className="flex items-center justify-between gap-3 border border-gray-100 rounded-md px-3 py-2">
+                  <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: COLOR_ORIGEN[o.origen] }} />
+                    {o.origen}
+                  </span>
+                  <span className="text-sm whitespace-nowrap">
+                    <span className="font-bold text-gray-900">{clp(o.total)}</span>
+                    <span className="text-gray-500"> ({o.cantidad} {o.cantidad === 1 ? 'venta' : 'ventas'})</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Contenedor principal para Estadísticas Superiores */}
