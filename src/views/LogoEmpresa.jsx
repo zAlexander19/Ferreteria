@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import { Package } from 'lucide-react';
-
-// El logo se busca en la carpeta public/ del proyecto. Se prueban las
-// extensiones más habituales para no obligar a un formato concreto, y si no
-// hay ninguna se muestra el ícono de siempre: así la app funciona igual antes
-// y después de copiar el archivo.
-const CANDIDATOS = [
-  '/logo_masas.png',
-  '/logo_masas.jpg',
-  '/logo_masas.jpeg',
-  '/logo_masas.webp',
-  '/logo_masas.svg',
-];
+import { CANDIDATOS } from '../lib/logo';
 
 export function LogoEmpresa({ size = 'md' }) {
   const [intento, setIntento] = useState(0);

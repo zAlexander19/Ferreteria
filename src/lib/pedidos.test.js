@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { unidadesDeItem, unidadesTotales, deltaReserva, saldoPendiente, comprometidoPorProducto } from './pedidos';
-import { ordenarPorEntrega, agruparPorEstado, filtrarPedidos, normalizarCobro } from './pedidos';
+import { ordenarPorEntrega, agruparPorEstado, filtrarPedidos, normalizarCobro, datosBoleta, describirProducto } from './pedidos';
 
 describe('unidadesDeItem', () => {
   it('multiplica bolsas por unidades por bolsa', () => {
@@ -354,5 +354,116 @@ describe('normalizarCobro', () => {
   it('el rechazo explica el motivo', () => {
     expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '30000' }, 24000).message)
       .toMatch(/total/i);
+  });
+});
+
+describe('datosBoleta', () => {
+  const pedido = {
+    id: 'PED-416263',
+    customerName: 'Dhayi Vega',
+    phone: '912345678',
+    deliveryDate: '2026-09-13',
+    deliveryTime: '12:00',
+    total: 54700,
+    paymentStatus: 'Sin pagar',
+    items: [
+      { id: 'HOR-001', name: 'Masas Horno 21cm', category: 'Horno', centimetros: '21', price: 2400, quantity: 15, unitsPerPackage: '10' },
+      { id: 'FRE-003', name: 'Masas Freir 19cm', category: 'Freir', centimetros: '19', price: 1700, quantity: 6, unitsPerPackage: '10' },
+    ],
+  };
+
+  it('arma una linea por producto del pedido', () => {
+    expect(datosBoleta(pedido).lineas).toHaveLength(2);
+  });
+
+  it('cada linea trae las bolsas y el precio de cada bolsa', () => {
+    const [primera] = datosBoleta(pedido).lineas;
+    expect(primera.bolsas).toBe(15);
+    expect(primera.precioUnitario).toBe(2400);
+  });
+
+  it('el subtotal de una linea es el precio por bolsa multiplicado por las bolsas', () => {
+    expect(datosBoleta(pedido).lineas[0].subtotal).toBe(36000);
+  });
+
+  it('cada linea trae las unidades de masa que representa', () => {
+    expect(datosBoleta(pedido).lineas[0].unidades).toBe(150);
+  });
+
+  it('conserva las etiquetas con las que se reconoce el producto', () => {
+    const [primera] = datosBoleta(pedido).lineas;
+    expect(primera.category).toBe('Horno');
+    expect(primera.centimetros).toBe('21');
+  });
+
+  it('suma el total de unidades de masa del pedido', () => {
+    expect(datosBoleta(pedido).totalUnidades).toBe(210);
+  });
+
+  it('el total en plata es el que se guardo en el pedido, no uno recalculado', () => {
+    expect(datosBoleta(pedido).total).toBe(54700);
+  });
+
+  it('copia los datos del cliente y de la entrega', () => {
+    const boleta = datosBoleta(pedido);
+    expect(boleta.cliente).toEqual({ nombre: 'Dhayi Vega', telefono: '912345678' });
+    expect(boleta.entrega).toEqual({ fecha: '2026-09-13', hora: '12:00' });
+  });
+
+  it('un pedido sin pagar debe el total entero', () => {
+    expect(datosBoleta(pedido).pago).toEqual({ estado: 'Sin pagar', abonado: 0, saldo: 54700 });
+  });
+
+  it('un pedido abonado muestra cuanto abono y cuanto falta', () => {
+    const abonado = { ...pedido, paymentStatus: 'Abonado', paidAmount: 20000 };
+    expect(datosBoleta(abonado).pago).toEqual({ estado: 'Abonado', abonado: 20000, saldo: 34700 });
+  });
+
+  it('un pedido pagado no deja saldo', () => {
+    const pagado = { ...pedido, paymentStatus: 'Pagado' };
+    expect(datosBoleta(pagado).pago).toEqual({ estado: 'Pagado', abonado: 0, saldo: 0 });
+  });
+
+  it('los pedidos viejos sin estado de pago cuentan como sin pagar', () => {
+    const viejo = { ...pedido, paymentStatus: undefined };
+    expect(datosBoleta(viejo).pago.estado).toBe('Sin pagar');
+  });
+
+  it('tolera un pedido sin items', () => {
+    const vacio = datosBoleta({ ...pedido, items: undefined });
+    expect(vacio.lineas).toEqual([]);
+    expect(vacio.totalUnidades).toBe(0);
+  });
+});
+
+describe('describirProducto', () => {
+  it('junta el tipo de masa y la medida', () => {
+    expect(describirProducto({ category: 'Horno', centimetros: '21' })).toBe('Horno · 21 cm');
+  });
+
+  it('agrega Coctel cuando el producto lo es', () => {
+    expect(describirProducto({ category: 'Freir', centimetros: '10', isCocktail: true }))
+      .toBe('Freir · 10 cm · Cóctel');
+  });
+
+  it('omite la medida cuando el producto no la tiene', () => {
+    expect(describirProducto({ category: 'Sopaipillas' })).toBe('Sopaipillas');
+  });
+
+  it('trata la medida vacia como ausente', () => {
+    expect(describirProducto({ category: 'Horno', centimetros: '' })).toBe('Horno');
+  });
+
+  it('acepta una medida de 0 sin confundirla con ausente', () => {
+    expect(describirProducto({ category: 'Horno', centimetros: 0 })).toBe('Horno · 0 cm');
+  });
+
+  it('omite el tipo cuando no esta cargado', () => {
+    expect(describirProducto({ centimetros: '19' })).toBe('19 cm');
+  });
+
+  it('devuelve texto vacio cuando no hay nada que describir', () => {
+    expect(describirProducto({})).toBe('');
+    expect(describirProducto(undefined)).toBe('');
   });
 });

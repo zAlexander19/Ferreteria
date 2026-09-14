@@ -152,3 +152,69 @@ export function normalizarCobro({ paymentStatus, paidAmount } = {}, total = 0) {
 
   return { ok: true, paymentStatus: 'Abonado', paidAmount: monto };
 }
+
+// Arma el modelo de datos del comprobante que se le manda al cliente.
+//
+// Vive aca y no dentro del componente para poder probarlo: la parte que
+// importa es aritmetica (precio por bolsa, subtotales, saldo), y una boleta
+// con un numero mal es peor que no tener boleta.
+//
+// El total sale del pedido y NO se recalcula sumando los subtotales: es el
+// precio que se acordo con el cliente. Si algun dia los dos numeros
+// discrepan, manda el que se pacto, no el que da la multiplicacion.
+export function datosBoleta(order) {
+  const lineas = (order?.items || []).map(item => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    centimetros: item.centimetros,
+    isCocktail: item.isCocktail,
+    bolsas: Number(item.quantity) || 0,
+    precioUnitario: Number(item.price) || 0,
+    unidades: unidadesDeItem(item),
+    subtotal: (Number(item.price) || 0) * (Number(item.quantity) || 0),
+  }));
+
+  const estado = order?.paymentStatus || 'Sin pagar';
+
+  return {
+    id: order?.id,
+    cliente: {
+      nombre: order?.customerName,
+      telefono: order?.phone,
+    },
+    entrega: {
+      fecha: order?.deliveryDate,
+      hora: order?.deliveryTime,
+    },
+    lineas,
+    totalUnidades: unidadesTotales(order?.items),
+    total: Number(order?.total) || 0,
+    pago: {
+      estado,
+      abonado: estado === 'Abonado' ? (Number(order?.paidAmount) || 0) : 0,
+      saldo: saldoPendiente(order),
+    },
+  };
+}
+
+// Describe un producto en una linea: "Horno · 21 cm · Coctel".
+//
+// Es la version en texto de las pastillas de colores de EtiquetasProducto, y
+// existe para la boleta. Ahi el detalle NO puede ir en pastillas: html2canvas
+// dibuja el texto mas arriba de donde va dentro de una caja ajustada, y en el
+// PNG las palabras salian corridas contra el borde de la pastilla. Sin caja
+// alrededor no hay contra que se note.
+//
+// La medida se compara contra vacio y nulo en vez de mirar si es "falsy",
+// porque 0 cm es un valor cargado y tiene que aparecer.
+export function describirProducto(item) {
+  const medida = item?.centimetros;
+  const hayMedida = medida !== '' && medida !== undefined && medida !== null;
+
+  return [
+    item?.category,
+    hayMedida ? `${medida} cm` : null,
+    item?.isCocktail ? 'Cóctel' : null,
+  ].filter(Boolean).join(' · ');
+}
