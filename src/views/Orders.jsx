@@ -4,6 +4,8 @@ import { faltantesPorProducto } from '../lib/inventory';
 import { unidadesDeItem, unidadesTotales, agruparPorEstado, filtrarPedidos, saldoPendiente } from '../lib/pedidos';
 import { OrderCard } from './OrderCard';
 import { DialogoCobro } from './DialogoCobro';
+import { BoletaPedido } from './BoletaPedido';
+import { AccionesPedido } from './AccionesPedido';
 import { RangoFechas } from './RangoFechas';
 import { SelectorFecha } from './SelectorFecha';
 import { SelectorHora } from './SelectorHora';
@@ -48,6 +50,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
   const [vista, setVista] = useState(() => localStorage.getItem(VISTA_GUARDADA) || 'tarjeta');
   const [pedidoAbierto, setPedidoAbierto] = useState(null);
   const [pedidoACobrar, setPedidoACobrar] = useState(null);
+  const [pedidoEnBoleta, setPedidoEnBoleta] = useState(null);
   const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => { localStorage.setItem(VISTA_GUARDADA, vista); }, [vista]);
@@ -309,6 +312,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                         onUpdateOrderStatus={onUpdateOrderStatus}
                         onDeleteOrder={onDeleteOrder}
                         onCobrar={setPedidoACobrar}
+                        onVerBoleta={setPedidoEnBoleta}
                       />
                     ))}
                   </div>
@@ -372,11 +376,13 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                         <tr className="text-left text-xs uppercase text-gray-500">
                           <th className="px-4 py-2">Entrega</th>
                           <th className="px-4 py-2">Cliente</th>
+                          <th className="px-4 py-2">Teléfono</th>
                           <th className="px-4 py-2">Productos</th>
                           <th className="px-4 py-2 text-right">Cant. bolsas</th>
                           <th className="px-4 py-2 text-right">Unidades</th>
                           <th className="px-4 py-2 text-right">Total</th>
                           <th className="px-4 py-2">Pago</th>
+                          <th className="px-4 py-2 text-right">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/60">
@@ -396,6 +402,9 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                               <td className="px-4 py-3 align-top">
                                 <div className="font-medium text-gray-800">{order.customerName}</div>
                                 <div className="text-xs text-gray-500">{order.id}</div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap align-top text-gray-700">
+                                {order.phone || <span className="text-gray-400">—</span>}
                               </td>
                               <td className="px-4 py-3 text-gray-700 align-top">
                                 <ul className="space-y-1">
@@ -450,6 +459,22 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                                   <div className="text-xs text-amber-700 mt-0.5">Falta {clp(saldoPendiente(order))}</div>
                                 )}
                               </td>
+                              <td
+                                className="px-4 py-3 align-top"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <div className="flex items-center justify-end gap-0.5">
+                                  <AccionesPedido
+                                    compacto
+                                    order={order}
+                                    onEdit={openEditModal}
+                                    onUpdateOrderStatus={onUpdateOrderStatus}
+                                    onDeleteOrder={onDeleteOrder}
+                                    onCobrar={setPedidoACobrar}
+                                    onVerBoleta={setPedidoEnBoleta}
+                                  />
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}
@@ -486,10 +511,18 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               onEdit={(o) => { setPedidoAbierto(null); openEditModal(o); }}
               onUpdateOrderStatus={(id, st) => { onUpdateOrderStatus(id, st); setPedidoAbierto(null); }}
               onCobrar={(o) => { setPedidoAbierto(null); setPedidoACobrar(o); }}
+              onVerBoleta={(o) => { setPedidoAbierto(null); setPedidoEnBoleta(o); }}
               onDeleteOrder={(id) => { onDeleteOrder(id); setPedidoAbierto(null); }}
             />
           </div>
         </div>
+      )}
+
+      {pedidoEnBoleta && (
+        <BoletaPedido
+          order={pedidoEnBoleta}
+          onCerrar={() => setPedidoEnBoleta(null)}
+        />
       )}
 
       {pedidoACobrar && (
