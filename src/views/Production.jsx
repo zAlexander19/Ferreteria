@@ -156,7 +156,7 @@ export function Production({ products, orders = [], productions = [], onRegister
           </p>
           <ul className="space-y-1">
             {pendientes.map(p => (
-              <li key={p.id} className="flex flex-wrap justify-between items-center gap-2 bg-white rounded-md border border-orange-100 px-3 py-2">
+              <li key={p.id} className="flex flex-wrap justify-between items-center gap-2 bg-white/60 rounded-md border border-orange-200/70 px-3 py-2">
                 <span className="text-sm font-medium text-gray-800">{p.name}</span>
                 <span className="text-sm whitespace-nowrap">
                   {p.unitsShort > 0 ? (
@@ -175,21 +175,21 @@ export function Production({ products, orders = [], productions = [], onRegister
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+        <div className="glass rounded-2xl p-4">
           <div className="text-sm text-gray-500">Registros de hoy</div>
           <div className="text-2xl font-bold text-gray-800">{todaySummary.records}</div>
         </div>
-        <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+        <div className="glass rounded-2xl p-4">
           <div className="text-sm text-gray-500">Tiradas realizadas hoy</div>
           <div className="text-2xl font-bold text-blue-700">{todaySummary.totalBatches}</div>
         </div>
-        <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+        <div className="glass rounded-2xl p-4">
           <div className="text-sm text-gray-500">Unidades agregadas hoy</div>
           <div className="text-2xl font-bold text-emerald-700">{todaySummary.totalUnits}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 sm:p-6">
+      <div className="glass rounded-2xl p-4 sm:p-6">
         <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
           <Factory className="w-6 h-6 text-blue-600" />
           Nuevo registro de producción
@@ -211,7 +211,7 @@ export function Production({ products, orders = [], productions = [], onRegister
                   type="text"
                   value={operatorName}
                   onChange={(e) => setOperatorName(e.target.value)}
-                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 px-3 py-2 campo"
                   placeholder="Ej: Juan Pérez"
                   required
                 />
@@ -221,13 +221,13 @@ export function Production({ products, orders = [], productions = [], onRegister
             <div className="space-y-3">
               {linePreview.map((line, index) => {
                 return (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 border border-gray-200 rounded-md p-3 bg-gray-50">
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 glass-sutil rounded-xl p-3">
                     <div className="md:col-span-2 xl:col-span-5">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Producto</label>
                       <select
                         value={line.productId}
                         onChange={(e) => handleLineChange(index, 'productId', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 campo"
                         required
                       >
                         <option value="">Seleccionar producto...</option>
@@ -250,7 +250,7 @@ export function Production({ products, orders = [], productions = [], onRegister
                           min="1"
                           value={line.quantityUnits}
                           onChange={(e) => handleLineChange(index, 'quantityUnits', e.target.value)}
-                          className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-10 px-3 py-2 campo"
                           placeholder="100"
                           required
                         />
@@ -268,7 +268,7 @@ export function Production({ products, orders = [], productions = [], onRegister
                           min="1"
                           value={line.batches}
                           onChange={(e) => handleLineChange(index, 'batches', e.target.value)}
-                          className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-10 px-3 py-2 campo"
                           placeholder="3"
                           required
                         />
@@ -321,11 +321,11 @@ export function Production({ products, orders = [], productions = [], onRegister
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 sm:p-6">
+      <div className="glass rounded-2xl p-4 sm:p-6">
         <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Historial de producción</h3>
 
         {productions.length === 0 ? (
-          <div className="px-4 py-8 text-center text-gray-500 bg-gray-50 rounded-md border border-gray-100">
+          <div className="px-4 py-8 text-center text-gray-500 glass-sutil rounded-xl">
             Todavía no hay producción registrada.
           </div>
         ) : (
@@ -353,8 +353,8 @@ export function Production({ products, orders = [], productions = [], onRegister
               }, {});
 
               return (
-                <article key={record.id} className="border border-gray-200 rounded-xl overflow-hidden bg-gradient-to-b from-white to-gray-50">
-                  <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <article key={record.id} className="glass rounded-2xl overflow-hidden">
+                  <div className="px-4 sm:px-5 py-4 border-b border-white/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <div className="text-sm text-gray-500">{new Date(record.date).toLocaleString('es-CL')}</div>
                       <div className="text-base font-semibold text-gray-900">Responsable: {record.operatorName}</div>
@@ -384,7 +384,7 @@ export function Production({ products, orders = [], productions = [], onRegister
                       );
 
                       return (
-                        <section key={`${record.id}-${categoryName}`} className="rounded-lg border border-gray-200 bg-white p-3">
+                        <section key={`${record.id}-${categoryName}`} className="rounded-2xl glass-sutil p-3">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getCategoryBadgeClass(categoryName)}`}>
                               {categoryName}
@@ -394,7 +394,7 @@ export function Production({ products, orders = [], productions = [], onRegister
 
                           <ul className="space-y-2">
                             {categoryItems.map((item, idx) => (
-                              <li key={`${record.id}-${categoryName}-${idx}`} className="border border-gray-100 rounded-md p-2.5 bg-gray-50">
+                              <li key={`${record.id}-${categoryName}-${idx}`} className="glass-sutil rounded-xl p-2.5">
                                 <div className="text-sm font-medium text-gray-800">{item.productName || item.productId}</div>
                                 <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2">
                                   <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800">{Number(item.quantityUnits) || Number(item.totalUnitsAdded) || 0} unid.</span>
@@ -404,7 +404,7 @@ export function Production({ products, orders = [], productions = [], onRegister
                             ))}
                           </ul>
 
-                          <div className="mt-3 pt-2 border-t border-gray-100 text-xs font-semibold text-gray-700 flex justify-between">
+                          <div className="mt-3 pt-2 border-t border-white/60 text-xs font-semibold text-gray-700 flex justify-between">
                             <span>Subtotal categoría</span>
                             <span>{categoryUnits} unid. | {categoryBatches} tiradas</span>
                           </div>

@@ -331,6 +331,18 @@ function App() {
     }));
   };
 
+  // Cambiar SOLO el estado de pago. A diferencia de `handleEditOrder`, no pasa
+  // por `deltaReserva` ni toca `stockReserved` ni `products`: por eso se puede
+  // usar sobre un pedido ya entregado sin volver a apartar mercaderia que ya
+  // salio por la puerta. Esa diferencia es todo el punto de esta funcion.
+  const handleUpdateOrderPayment = (orderId, { paymentStatus, paidAmount }) => {
+    setOrders(prevOrders => prevOrders.map(order => (
+      order.id === orderId
+        ? { ...order, paymentStatus, paidAmount }
+        : order
+    )));
+  };
+
   const handleDeleteOrder = (orderId) => {
     const orderToDelete = orders.find(order => order.id === orderId);
 
@@ -497,17 +509,17 @@ function App() {
         : 'Error de sincronización';
 
   const cloudSyncClass = cloudSyncState === 'synced'
-    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    ? 'bg-emerald-500/15 text-emerald-800 border border-emerald-600/20 backdrop-blur-sm'
     : cloudSyncState === 'syncing' || cloudSyncState === 'connecting'
-      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-      : 'bg-red-100 text-red-800 border border-red-200';
+      ? 'bg-amber-500/20 text-amber-900 border border-amber-600/20 backdrop-blur-sm'
+      : 'bg-red-500/15 text-red-800 border border-red-600/20 backdrop-blur-sm';
 
   if (!isSupabaseConfigured) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Falta configuración</h1>
-          <p className="text-sm text-gray-600">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md glass-solido rounded-2xl p-8 text-center">
+          <h1 className="text-xl font-bold text-masa-carbon mb-2">Falta configuración</h1>
+          <p className="text-sm text-masa-carbon/70">
             No están definidas las variables <code>VITE_SUPABASE_URL</code> y{' '}
             <code>VITE_SUPABASE_ANON_KEY</code>. Ver <code>SUPABASE_SETUP.md</code>.
           </p>
@@ -518,37 +530,37 @@ function App() {
 
   if (!isAuthChecked) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <p className="text-gray-500">Cargando...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-masa-carbon/60">Cargando...</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md glass-solido rounded-2xl p-6 sm:p-8">
           <div className="mb-6 text-center">
             <div className="flex justify-center mb-3">
               <LogoEmpresa size="lg" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Fabrica de Masas</h1>
-            <p className="text-sm text-gray-500">Inicia sesion para acceder al sistema</p>
+            <h1 className="text-2xl font-bold text-masa-carbon">Fabrica de Masas</h1>
+            <p className="text-sm text-masa-carbon/60">Inicia sesion para acceder al sistema</p>
           </div>
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Correo</label>
+              <label className="block text-sm font-medium text-masa-carbon/80 mb-1">Correo</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="w-4 h-4 text-gray-400" />
+                  <Mail className="w-4 h-4 text-masa-carbon/40" />
                 </div>
                 <input
                   type="email"
                   name="email"
                   value={loginForm.email}
                   onChange={handleLoginChange}
-                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 px-3 py-2 bg-white/70 border border-white/80 rounded-lg text-masa-carbon placeholder:text-masa-carbon/40 focus:outline-none focus:ring-2 focus:ring-masa-naranja/60 focus:border-masa-naranja/40 transition"
                   placeholder="masas@gmail.com"
                   required
                 />
@@ -556,17 +568,17 @@ function App() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contrasena</label>
+              <label className="block text-sm font-medium text-masa-carbon/80 mb-1">Contrasena</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <KeyRound className="w-4 h-4 text-gray-400" />
+                  <KeyRound className="w-4 h-4 text-masa-carbon/40" />
                 </div>
                 <input
                   type="password"
                   name="password"
                   value={loginForm.password}
                   onChange={handleLoginChange}
-                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 px-3 py-2 bg-white/70 border border-white/80 rounded-lg text-masa-carbon placeholder:text-masa-carbon/40 focus:outline-none focus:ring-2 focus:ring-masa-naranja/60 focus:border-masa-naranja/40 transition"
                   placeholder="********"
                   required
                 />
@@ -582,7 +594,7 @@ function App() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+              className="w-full py-2.5 bg-masa-naranja text-white rounded-lg font-semibold shadow-vidrio hover:bg-masa-tostado transition-colors disabled:bg-masa-carbon/20 disabled:shadow-none"
             >
               {isLoggingIn ? 'Entrando...' : 'Iniciar sesion'}
             </button>
@@ -593,24 +605,24 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gray-50 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden">
       {isMobileNavOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-masa-carbon/40 backdrop-blur-sm z-30 lg:hidden"
           onClick={() => setIsMobileNavOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 lg:static lg:w-64 lg:translate-x-0 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-4 lg:p-6 border-b border-gray-100 shrink-0">
+      <aside className={`fixed inset-y-0 left-0 z-40 w-72 glass-nav border-r flex flex-col transition-transform duration-200 lg:static lg:w-64 lg:translate-x-0 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-4 lg:p-6 border-b border-white/60 shrink-0">
            <div className="flex items-center justify-between gap-3">
              <div className="flex items-center gap-3">
              <LogoEmpresa />
-             <h1 className="text-xl font-bold text-gray-800">Fábrica de Masas<br/><span className="text-sm font-normal text-gray-500">Gestión V1.0</span></h1>
+             <h1 className="text-xl font-bold text-masa-carbon">Fábrica de Masas<br/><span className="text-sm font-normal text-masa-carbon/50">Gestión V1.0</span></h1>
              </div>
              <button
-              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+              className="lg:hidden p-2 text-masa-carbon/60 hover:text-masa-carbon hover:bg-white/60 rounded-lg transition-colors"
               onClick={() => setIsMobileNavOpen(false)}
               aria-label="Cerrar barra de tareas"
             >
@@ -624,8 +636,8 @@ function App() {
             onClick={() => handleTabChange('inventory')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors whitespace-nowrap ${
               activeTab === 'inventory' 
-                ? 'bg-blue-50 text-blue-700 font-medium' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-masa-naranja/20 text-masa-tostado font-semibold shadow-sm' 
+                : 'text-masa-carbon/70 hover:bg-white/60'
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -636,8 +648,8 @@ function App() {
             onClick={() => handleTabChange('sales')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors whitespace-nowrap ${
               activeTab === 'sales' 
-                ? 'bg-blue-50 text-blue-700 font-medium' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-masa-naranja/20 text-masa-tostado font-semibold shadow-sm' 
+                : 'text-masa-carbon/70 hover:bg-white/60'
             }`}
           >
             <ShoppingCart className="w-5 h-5" />
@@ -648,8 +660,8 @@ function App() {
             onClick={() => handleTabChange('orders')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors whitespace-nowrap ${
               activeTab === 'orders' 
-                ? 'bg-blue-50 text-blue-700 font-medium' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-masa-naranja/20 text-masa-tostado font-semibold shadow-sm' 
+                : 'text-masa-carbon/70 hover:bg-white/60'
             }`}
           >
             <ClipboardList className="w-5 h-5" />
@@ -660,8 +672,8 @@ function App() {
             onClick={() => handleTabChange('production')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors whitespace-nowrap ${
               activeTab === 'production' 
-                ? 'bg-blue-50 text-blue-700 font-medium' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-masa-naranja/20 text-masa-tostado font-semibold shadow-sm' 
+                : 'text-masa-carbon/70 hover:bg-white/60'
             }`}
           >
             <Package className="w-5 h-5" />
@@ -672,8 +684,8 @@ function App() {
             onClick={() => handleTabChange('statistics')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors whitespace-nowrap ${
               activeTab === 'statistics' 
-                ? 'bg-blue-50 text-blue-700 font-medium' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-masa-naranja/20 text-masa-tostado font-semibold shadow-sm' 
+                : 'text-masa-carbon/70 hover:bg-white/60'
             }`}
           >
             <BarChart3 className="w-5 h-5" />
@@ -681,14 +693,14 @@ function App() {
           </button>
         </nav>
 
-        <div className="p-3 lg:p-4 border-t border-gray-100 space-y-2">
-           <button className="w-full hidden lg:flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+        <div className="p-3 lg:p-4 border-t border-white/60 space-y-2">
+           <button className="w-full hidden lg:flex items-center gap-3 px-4 py-3 rounded-lg text-masa-carbon/70 hover:bg-white/60 transition-colors">
             <Settings className="w-5 h-5" />
             Configuración
           </button>
            <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-2.5 lg:py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
+            className="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-2.5 lg:py-3 rounded-lg text-red-700 hover:bg-red-500/10 transition-colors whitespace-nowrap"
           >
             <LogOut className="w-5 h-5" />
             Cerrar Sesión
@@ -699,17 +711,17 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center shadow-sm gap-3">
+        <header className="glass-nav border-b px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center gap-3 shrink-0">
            <div className="flex items-center gap-3 min-w-0">
              <button
               onClick={() => setIsMobileNavOpen(true)}
-              className="lg:hidden inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="lg:hidden inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/80 bg-white/50 text-masa-carbon hover:bg-white/80 transition-colors"
               aria-label="Abrir barra de tareas"
             >
               <Menu className="w-4 h-4" />
               Menu
             </button>
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 truncate">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-masa-carbon truncate">
               {activeTab === 'inventory' ? 'Panel de Inventario' : activeTab === 'sales' ? 'Nueva Venta' : activeTab === 'orders' ? 'Gestión de Pedidos' : activeTab === 'production' ? 'Registro de Producción' : 'Estadísticas y Reportes'}
             </h2>
            </div>
@@ -718,10 +730,10 @@ function App() {
                {cloudSyncLabel}
              </span>
              <div className="text-right hidden sm:block">
-               <div className="text-sm font-medium text-gray-900">{session.user.email}</div>
-               <div className="text-xs text-gray-500">Dueña</div>
+               <div className="text-sm font-medium text-masa-carbon">{session.user.email}</div>
+               <div className="text-xs text-masa-carbon/55">Dueña</div>
              </div>
-               <div className="h-9 w-9 sm:h-10 sm:w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+               <div className="h-9 w-9 sm:h-10 sm:w-10 bg-masa-amarillo/40 rounded-full flex items-center justify-center text-masa-tostado font-bold border border-white/70 shadow-vidrio shrink-0">
               AD
             </div>
            </div>
@@ -749,6 +761,7 @@ function App() {
               onAddOrder={handleAddOrder}
               onEditOrder={handleEditOrder}
               onUpdateOrderStatus={handleUpdateOrderStatus}
+              onUpdateOrderPayment={handleUpdateOrderPayment}
               onDeleteOrder={handleDeleteOrder}
             />
           ) : activeTab === 'production' ? (

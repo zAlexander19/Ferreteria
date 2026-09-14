@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { unidadesDeItem, unidadesTotales, deltaReserva, saldoPendiente, comprometidoPorProducto } from './pedidos';
-import { ordenarPorEntrega, agruparPorEstado, filtrarPedidos } from './pedidos';
+import { ordenarPorEntrega, agruparPorEstado, filtrarPedidos, normalizarCobro } from './pedidos';
 
 describe('unidadesDeItem', () => {
   it('multiplica bolsas por unidades por bolsa', () => {
@@ -234,5 +234,125 @@ describe('filtrarPedidos', () => {
 
   it('combina fecha y pago', () => {
     expect(filtrarPedidos(orders, { desde: '2026-10-16', estadoPago: 'Sin pagar' }).map(o => o.id)).toEqual(['c', 'd']);
+  });
+});
+
+describe('filtrarPedidos con texto', () => {
+  const orders = [
+    ped('PED-001', '2026-10-05', { customerName: 'Maria Nunez', phone: '912345678' }),
+    ped('PED-002', '2026-10-15', { customerName: 'Jose Nunez', phone: '987654321' }),
+    ped('PED-003', '2026-10-25', { customerName: 'Ana Rojas', phone: '911111111' }),
+  ];
+
+  it('busca por nombre de cliente', () => {
+    expect(filtrarPedidos(orders, { texto: 'rojas' }).map(o => o.id)).toEqual(['PED-003']);
+  });
+
+  it('ignora mayusculas y minusculas', () => {
+    expect(filtrarPedidos(orders, { texto: 'ANA' }).map(o => o.id)).toEqual(['PED-003']);
+  });
+
+  it('encuentra por coincidencia parcial', () => {
+    expect(filtrarPedidos(orders, { texto: 'nunez' }).map(o => o.id)).toEqual(['PED-001', 'PED-002']);
+  });
+
+  it('busca por telefono', () => {
+    expect(filtrarPedidos(orders, { texto: '87654' }).map(o => o.id)).toEqual(['PED-002']);
+  });
+
+  it('busca por numero de pedido', () => {
+    expect(filtrarPedidos(orders, { texto: 'PED-003' }).map(o => o.id)).toEqual(['PED-003']);
+  });
+
+  it('ignora espacios sobrantes alrededor', () => {
+    expect(filtrarPedidos(orders, { texto: '  rojas  ' }).map(o => o.id)).toEqual(['PED-003']);
+  });
+
+  it('un texto vacio no filtra nada', () => {
+    expect(filtrarPedidos(orders, { texto: '' }).map(o => o.id)).toEqual(['PED-001', 'PED-002', 'PED-003']);
+  });
+
+  it('devuelve vacio cuando no hay coincidencias', () => {
+    expect(filtrarPedidos(orders, { texto: 'zzz' })).toEqual([]);
+  });
+
+  it('se combina con los otros filtros', () => {
+    expect(filtrarPedidos(orders, { texto: 'nunez', desde: '2026-10-10' }).map(o => o.id)).toEqual(['PED-002']);
+  });
+
+  it('tolera pedidos sin nombre ni telefono', () => {
+    expect(filtrarPedidos([ped('PED-009', '2026-10-05')], { texto: 'ana' })).toEqual([]);
+  });
+});
+
+describe('filtrarPedidos: las tildes no importan', () => {
+  // Con clientes chilenos esto no es un caso de borde: que "Nunez" no
+  // encuentre a "Nunez" con tilde seria un bug garantizado en el mostrador.
+  const orders = [
+    ped('PED-001', '2026-10-05', { customerName: 'María Núñez' }),
+    ped('PED-002', '2026-10-15', { customerName: 'Sebastián Bórquez' }),
+  ];
+
+  it('un texto sin tildes encuentra un nombre con tildes', () => {
+    expect(filtrarPedidos(orders, { texto: 'nunez' }).map(o => o.id)).toEqual(['PED-001']);
+  });
+
+  it('un texto con tildes encuentra un nombre con tildes', () => {
+    expect(filtrarPedidos(orders, { texto: 'Núñez' }).map(o => o.id)).toEqual(['PED-001']);
+  });
+
+  it('un texto con tildes encuentra un nombre sin tildes', () => {
+    const sinTildes = [
+      ped('PED-003', '2026-10-05', { customerName: 'Maria Nunez' }),
+      ped('PED-004', '2026-10-05', { customerName: 'Ana Rojas' }),
+    ];
+    expect(filtrarPedidos(sinTildes, { texto: 'María' }).map(o => o.id)).toEqual(['PED-003']);
+  });
+
+  it('funciona en el medio de la palabra', () => {
+    expect(filtrarPedidos(orders, { texto: 'borquez' }).map(o => o.id)).toEqual(['PED-002']);
+  });
+});
+
+describe('normalizarCobro', () => {
+  it('Pagado deja el monto abonado en 0 porque ya no queda saldo', () => {
+    expect(normalizarCobro({ paymentStatus: 'Pagado', paidAmount: '5000' }, 24000))
+      .toEqual({ ok: true, paymentStatus: 'Pagado', paidAmount: 0 });
+  });
+
+  it('Sin pagar descarta cualquier monto que hubiera quedado cargado', () => {
+    expect(normalizarCobro({ paymentStatus: 'Sin pagar', paidAmount: '5000' }, 24000))
+      .toEqual({ ok: true, paymentStatus: 'Sin pagar', paidAmount: 0 });
+  });
+
+  it('Abonado convierte el monto de texto a numero', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '10000' }, 24000))
+      .toEqual({ ok: true, paymentStatus: 'Abonado', paidAmount: 10000 });
+  });
+
+  it('rechaza un abono de 0', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '0' }, 24000).ok).toBe(false);
+  });
+
+  it('rechaza un abono negativo', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '-500' }, 24000).ok).toBe(false);
+  });
+
+  it('rechaza un abono sin monto', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '' }, 24000).ok).toBe(false);
+  });
+
+  it('rechaza un abono mayor al total', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '30000' }, 24000).ok).toBe(false);
+  });
+
+  it('un abono igual al total es en realidad un pago completo', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '24000' }, 24000))
+      .toEqual({ ok: true, paymentStatus: 'Pagado', paidAmount: 0 });
+  });
+
+  it('el rechazo explica el motivo', () => {
+    expect(normalizarCobro({ paymentStatus: 'Abonado', paidAmount: '30000' }, 24000).message)
+      .toMatch(/total/i);
   });
 });

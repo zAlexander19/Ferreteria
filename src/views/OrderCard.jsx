@@ -1,4 +1,4 @@
-import { CalendarClock, Trash2, CheckCircle, Clock, X, User, AlertTriangle, Pencil } from 'lucide-react';
+import { CalendarClock, Trash2, CheckCircle, Clock, X, User, AlertTriangle, Pencil, Wallet } from 'lucide-react';
 import { EtiquetasProducto } from './EtiquetasProducto';
 import { unidadesDeItem, unidadesTotales, saldoPendiente } from '../lib/pedidos';
 import { mostrarFecha } from '../lib/fechas';
@@ -11,7 +11,7 @@ const ESTILO_PAGO = {
   'Sin pagar': 'bg-red-100 text-red-800 border border-red-200',
 };
 
-export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDeleteOrder }) {
+export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDeleteOrder, onCobrar }) {
   const isReleased = order.status === 'Cancelado' || order.stockReserved === false;
 
   // Faltante en vivo contra el stock de hoy: si el pedido sigue pendiente y
@@ -32,7 +32,7 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+    <div className="glass rounded-2xl overflow-hidden flex flex-col">
       <div className="px-4 pt-3 pb-1 flex flex-wrap gap-2">
         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
           isReleased
@@ -84,7 +84,7 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
           Hora: {order.deliveryTime || 'No especificada'}
         </div>
 
-        <div className="border-t border-gray-100 pt-3">
+        <div className="border-t border-white/60 pt-3">
           <p className="text-xs text-gray-500 font-semibold mb-2 uppercase">Productos:</p>
           <ul className="text-sm space-y-2 mb-4">
             {order.items.map(item => {
@@ -112,7 +112,7 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
             })}
           </ul>
 
-          <div className="text-xs text-gray-600 bg-gray-50 rounded-md px-3 py-2 mb-3 border border-gray-100">
+          <div className="text-xs text-gray-600 glass-sutil rounded-xl px-3 py-2 mb-3">
             Total del pedido: <span className="font-semibold">{unidadesTotales(order.items)} unidades</span> de masa
           </div>
 
@@ -129,7 +129,20 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
         </div>
       </div>
 
-      <div className="p-3 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end">
+      <div className="p-3 glass-panel border-t border-white/60 flex gap-2 justify-end">
+        {/* El cobro es independiente de la entrega: un pedido entregado puede
+            seguir sin pagarse. En un cancelado no hay nada que cobrar. */}
+        {order.status !== 'Cancelado' && (
+          <button
+            onClick={() => onCobrar(order)}
+            className="p-2 text-masa-tostado hover:bg-masa-amarillo/25 rounded-xl transition-colors flex items-center gap-1"
+            title="Cambiar estado de pago"
+          >
+            <Wallet className="w-5 h-5" />
+            <span className="text-sm font-medium">Cobrar</span>
+          </button>
+        )}
+
         {order.status === 'Pendiente' && (
           <>
             <button

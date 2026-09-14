@@ -21,14 +21,14 @@ export function LogoEmpresa({ size = 'md' }) {
 
   if (intento >= CANDIDATOS.length) {
     return (
-      <div className={`${caja} bg-blue-600 rounded-xl flex items-center justify-center shrink-0`}>
+      <div className={`${caja} bg-masa-naranja rounded-full flex items-center justify-center shrink-0 shadow-vidrio`}>
         <Package className={`${icono} text-white`} />
       </div>
     );
   }
 
   return (
-    <div className={`${caja} bg-white rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden shrink-0`}>
+    <div className={`${caja} bg-white/80 rounded-full border border-white/80 flex items-center justify-center overflow-hidden shrink-0 shadow-vidrio`}>
       <img
         src={CANDIDATOS[intento]}
         alt="Fábrica de Masas"

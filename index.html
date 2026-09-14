@@ -2,11 +2,17 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/logo_masas.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FFF6E8" />
     <title>Sistema de Inventario Masas La Dueña</title>
   </head>
   <body>
+    <!-- Degradado + marca de agua del logo. Vive fuera de #root porque es
+         puramente decorativo y esta en las cuatro pantallas de la app
+         (login, carga, error de config y el panel). Se estiliza en
+         src/index.css. -->
+    <div id="fondo-marca" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -80,7 +80,7 @@ export function Sales({ products, onCompleteSale }) {
 
   return (
     <div className="flex flex-col h-full gap-4 sm:gap-6">
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="glass p-4 sm:p-6 rounded-2xl">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
           <ShoppingCart className="w-6 h-6 text-blue-600" />
           Punto de Venta
@@ -96,11 +96,11 @@ export function Sales({ products, onCompleteSale }) {
             placeholder="Buscar producto por nombre o SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2.5 sm:py-3 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-base sm:text-lg"
+            className="pl-10 pr-4 py-2.5 sm:py-3 w-full campo shadow-sm text-base sm:text-lg"
           />
           {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 z-10 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 glass-solido rounded-xl mt-1 z-10 max-h-60 overflow-y-auto">
               {searchResults.map(product => {
                 const unitsPerBag = parseInt(product.unitsPerPackage) || 1;
                 const stock = Number(product.stock) || 0;
@@ -111,7 +111,7 @@ export function Sales({ products, onCompleteSale }) {
                   <button
                     key={product.id}
                     onClick={() => addToCart(product)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex justify-between items-center gap-3"
+                    className="w-full text-left px-4 py-3 hover:bg-white/60 border-b border-white/60 last:border-0 flex justify-between items-center gap-3"
                   >
                     <div className="min-w-0">
                       <div className="font-medium text-gray-800">{product.name}</div>
@@ -142,8 +142,8 @@ export function Sales({ products, onCompleteSale }) {
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        <div className="hidden md:grid p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-500 grid-cols-12 gap-4">
+      <div className="flex-1 glass rounded-2xl flex flex-col overflow-hidden">
+        <div className="hidden md:grid p-4 glass-panel border-b border-white/60 font-medium text-gray-500 grid-cols-12 gap-4">
           <div className="col-span-6">Producto (Bolsa)</div>
           <div className="col-span-2 text-center">Cant. Bolsas</div>
           <div className="col-span-2 text-right">Precio Bolsa</div>
@@ -158,7 +158,7 @@ export function Sales({ products, onCompleteSale }) {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-center p-3 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-shadow">
+              <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-center p-3 glass-sutil rounded-2xl hover:bg-white/75 transition-colors">
                 <div className="md:col-span-6">
                   <div className="font-medium text-gray-900">{item.name}</div>
                   <div className="text-xs text-gray-500">{item.id}</div>
@@ -169,7 +169,7 @@ export function Sales({ products, onCompleteSale }) {
                 <div className="md:col-span-2 flex items-center md:justify-center gap-2">
                   <button 
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="p-1 rounded-full hover:bg-gray-100 text-gray-600"
+                    className="p-1 rounded-full hover:bg-white/80 text-masa-carbon/70"
                     disabled={item.quantity <= 1}
                   >
                     <Minus className="w-4 h-4" />
@@ -177,7 +177,7 @@ export function Sales({ products, onCompleteSale }) {
                   <span className="w-8 text-center font-medium">{item.quantity}</span>
                   <button 
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="p-1 rounded-full hover:bg-gray-100 text-gray-600"
+                    className="p-1 rounded-full hover:bg-white/80 text-masa-carbon/70"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -201,9 +201,9 @@ export function Sales({ products, onCompleteSale }) {
           )}
         </div>
 
-        <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-200">
+        <div className="p-4 sm:p-6 glass-panel border-t border-white/60">
           {cart.length > 0 && (
-            <div className="text-sm text-gray-600 bg-white rounded-md px-3 py-2 mb-4 border border-gray-200">
+            <div className="text-sm text-gray-600 glass-sutil rounded-xl px-3 py-2 mb-4">
               En total: <span className="font-semibold">{cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'bolsa' : 'bolsas'}</span>
               {' · '}
               <span className="font-semibold">{unidadesTotales(cart)} unidades</span> de masa

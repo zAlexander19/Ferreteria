@@ -153,7 +153,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Controls Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 glass p-4 rounded-2xl">
         <button
           onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
@@ -173,7 +173,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
               placeholder="Buscar por nombre o ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full md:w-64 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="pl-10 pr-4 py-2 w-full md:w-64 campo focus:border-transparent"
             />
           </div>
 
@@ -185,7 +185,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="pl-10 pr-8 py-2 w-full md:w-48 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
+              className="pl-10 pr-8 py-2 w-full md:w-48 campo appearance-none cursor-pointer"
             >
               <option value="Todas">Todas las categorías</option>
               {CATEGORIES.map(cat => (
@@ -198,9 +198,9 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-fade-in flex flex-col">
-            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="fixed inset-0 bg-masa-carbon/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-solido rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-fade-in flex flex-col">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-white/60 glass-panel">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 {editingId ? <Pencil className="w-5 h-5 text-blue-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
                 {editingId ? 'Editar Producto' : 'Nuevo Producto'}
@@ -227,7 +227,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   name="centimetros"
                   value={formData.centimetros}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 campo"
                   placeholder="Ej. 15"
                   required
                 />
@@ -238,7 +238,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 campo"
                 >
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
@@ -249,7 +249,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   name="unitsPerPackage"
                   value={formData.unitsPerPackage}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 campo"
                   required
                 >
                   <option value="" disabled>Seleccionar unidades...</option>
@@ -265,7 +265,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   name="stock"
                   value={formData.stock}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 campo"
                   placeholder="0"
                   min="0"
                   required
@@ -293,7 +293,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                     name="price"
                     value={formData.price}
                     onChange={handleInputChange}
-                    className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-7 px-3 py-2 campo"
                     placeholder="0"
                     min="0"
                     required
@@ -307,7 +307,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                   name="minStock"
                   value={formData.minStock}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 campo"
                   placeholder="Ej: 5"
                   min="0"
                   required
@@ -324,7 +324,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                     name="cost"
                     value={formData.cost}
                     onChange={handleInputChange}
-                    className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-7 px-3 py-2 campo"
                     placeholder="0"
                     min="0"
                   />
@@ -349,7 +349,7 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="px-4 py-2 border border-white/80 bg-white/60 text-masa-carbon/80 font-medium rounded-md hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Cancelar
                 </button>
@@ -366,14 +366,14 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
       )}
 
       {/* Productos: tarjetas apiladas en celular, tabla desde md */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+      <div className="glass rounded-2xl overflow-hidden">
         {filteredProducts.length === 0 ? (
           <div className="px-6 py-10 text-center text-gray-500">
             {products.length === 0 ? "No hay productos en el inventario" : "No se encontraron productos con estos filtros"}
           </div>
         ) : (
           <>
-            <ul className="divide-y divide-gray-200 md:hidden">
+            <ul className="divide-y divide-white/60 md:hidden">
               {filteredProducts.map((product) => (
                 <li key={product.id} className="p-4">
                   <div className="flex justify-between items-start gap-3">
@@ -415,8 +415,8 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
             </ul>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="min-w-[760px] w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-[760px] w-full divide-y divide-white/60">
+                <thead className="glass-panel">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU / Producto</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
@@ -425,12 +425,12 @@ export function InventoryTable({ products, orders = [], onAddProduct, onEditProd
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/60">
                   {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={product.id} className="hover:bg-white/60 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full text-gray-500">
+                          <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-white/60 rounded-full text-masa-carbon/50">
                             <Package className="w-5 h-5" />
                           </div>
                           <div className="ml-4">

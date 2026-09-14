@@ -24,7 +24,7 @@ function EtiquetaOrigen({ origen }) {
 export function ListaVentas({ ventas }) {
   if (ventas.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-gray-500 bg-gray-50 rounded-md">
+      <div className="px-4 py-8 text-center text-masa-carbon/60 glass-panel rounded-xl">
         No hay ventas registradas para este filtro.
       </div>
     );
@@ -34,7 +34,7 @@ export function ListaVentas({ ventas }) {
     <>
       <ul className="space-y-2 md:hidden">
         {ventas.map(v => (
-          <li key={v.id} className="border border-gray-200 rounded-lg p-3">
+          <li key={v.id} className="glass-sutil rounded-2xl p-3">
             <div className="flex justify-between items-start gap-2 mb-1">
               <EtiquetaOrigen origen={v.origen} />
               <span className="font-bold text-gray-900 whitespace-nowrap">{clp(v.total)}</span>
@@ -53,8 +53,8 @@ export function ListaVentas({ ventas }) {
       </ul>
 
       <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-white/60 text-sm">
+          <thead className="glass-panel">
             <tr className="text-left text-xs uppercase text-gray-500">
               <th className="px-4 py-2">Fecha</th>
               <th className="px-4 py-2">Origen</th>
@@ -63,9 +63,9 @@ export function ListaVentas({ ventas }) {
               <th className="px-4 py-2 text-right">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-white/60">
             {ventas.map(v => (
-              <tr key={v.id} className="hover:bg-gray-50">
+              <tr key={v.id} className="hover:bg-white/60">
                 <td className="px-4 py-3 whitespace-nowrap align-top">
                   <div className="font-medium text-gray-800">{mostrarFecha(v.fecha)}</div>
                   <div className="text-xs text-gray-500">{v.hora}</div>
@@ -93,9 +93,9 @@ export function ListaVentas({ ventas }) {
 
 export function ModalVentas({ ventas, total, onClose, filtro }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
-        <div className="flex justify-between items-center gap-3 px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+    <div className="fixed inset-0 bg-masa-carbon/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="glass-solido rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/60 glass-panel">
           <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 min-w-0">
             <ShoppingCart className="w-5 h-5 text-blue-600 shrink-0" />
             <span className="truncate">Todas las ventas</span>
@@ -105,7 +105,7 @@ export function ModalVentas({ ventas, total, onClose, filtro }) {
           </button>
         </div>
 
-        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 sm:px-6 py-3 border-b border-white/60 flex flex-wrap items-center justify-between gap-3">
           {filtro}
           <div className="text-sm text-gray-600">
             <span className="font-semibold">{ventas.length}</span> ventas ·{' '}
