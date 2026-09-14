@@ -88,19 +88,19 @@
 @layer components {
   /* El caso general: tarjetas, paneles, tablas. */
   .glass {
-    @apply bg-white/55 backdrop-blur-2xl backdrop-saturate-150 border border-white/70 shadow-vidrio;
+    @apply bg-white/90 backdrop-blur-2xl backdrop-saturate-150 border border-white/80 shadow-vidrio;
   }
 
   /* Para lo que hay que poder leer si o si: modales, popovers,
      formularios. Mas opaco a proposito. */
   .glass-solido {
-    @apply bg-white/80 backdrop-blur-3xl backdrop-saturate-150 border border-white/80 shadow-vidrio-alto;
+    @apply bg-white/90 backdrop-blur-3xl backdrop-saturate-150 border border-white/80 shadow-vidrio-alto;
   }
 
   /* Barras de navegacion. No define de que lado va el borde: eso lo pone
      quien la usa con border-r o border-b. */
   .glass-nav {
-    @apply bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/50;
+    @apply bg-white/75 backdrop-blur-2xl backdrop-saturate-150 border-white/50;
   }
 
   /* Superficies anidadas: filas dentro de una tarjeta, items de una lista,
@@ -109,13 +109,13 @@
      enturbia el resultado. Alcanza con que sean algo mas claras que la
      tarjeta que las contiene. */
   .glass-sutil {
-    @apply bg-white/45 border border-white/60;
+    @apply bg-white/70 border border-white/80;
   }
 
   /* Zonas hundidas: encabezados de tabla, barras de totales, pies de
      modal. Ocupan el lugar que tenia bg-gray-50. */
   .glass-panel {
-    @apply bg-white/30;
+    @apply bg-white/60;
   }
 
   /* Campos de formulario. Los inputs no heredan el fondo de la tarjeta:
@@ -123,7 +123,7 @@
      como parches opacos. Ademas centraliza el color del foco, que hoy es
      azul y es lo unico que falta pasar a la paleta del logo. */
   .campo {
-    @apply bg-white/65 border border-white/75 rounded-lg text-masa-carbon placeholder:text-masa-carbon/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
+    @apply bg-white/80 border border-white/85 rounded-lg text-masa-carbon placeholder:text-masa-carbon/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
   }
 
   /* Sin backdrop-filter no hay vidrio posible, asi que se compensa con
