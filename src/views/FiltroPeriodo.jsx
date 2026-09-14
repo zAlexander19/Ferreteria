@@ -20,11 +20,11 @@ export function FiltroPeriodo({ anio, mes, porAnio, onChange }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+      <div className="flex items-center border border-white/80 rounded-md overflow-hidden">
         <button
           type="button"
           onClick={() => mover(-1)}
-          className="px-2 py-2 text-gray-500 hover:bg-gray-50"
+          className="px-2 py-2 text-gray-500 hover:bg-white/60"
           title={porAnio ? 'Año anterior' : 'Mes anterior'}
         >
           <ChevronLeft className="w-4 h-4" />
@@ -35,21 +35,21 @@ export function FiltroPeriodo({ anio, mes, porAnio, onChange }) {
         <button
           type="button"
           onClick={() => mover(1)}
-          className="px-2 py-2 text-gray-500 hover:bg-gray-50"
+          className="px-2 py-2 text-gray-500 hover:bg-white/60"
           title={porAnio ? 'Año siguiente' : 'Mes siguiente'}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="flex border border-gray-300 rounded-md overflow-hidden">
+      <div className="flex border border-white/80 rounded-md overflow-hidden">
         {[['Mes', false], ['Año', true]].map(([texto, valor]) => (
           <button
             key={texto}
             type="button"
             onClick={() => onChange({ anio, mes, porAnio: valor })}
             className={`px-3 py-2 text-sm font-medium ${
-              porAnio === valor ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+              porAnio === valor ? 'bg-blue-600 text-white' : 'bg-white/60 text-masa-carbon/70 hover:bg-white/90'
             }`}
           >
             {texto}

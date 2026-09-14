@@ -1,3 +1,157 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Fondo de la aplicacion
+
+   Malla de degradados calidos + grano + la marca de agua del logo. Las
+   tres capas viven en un div fijo (#fondo-marca, declarado en
+   index.html) y no en el body. La alternativa natural seria
+   `background-attachment: fixed` sobre el body, pero eso se comporta mal
+   en los navegadores de celular, y la app se usa sobre todo desde el
+   telefono.
+   ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    background-color: theme('colors.masa.crema');
+  }
+
+  body {
+    @apply text-masa-carbon;
+    background-color: transparent;
+  }
+
+  /* El contenido tiene que quedar por encima del fondo. Los dos declaran
+     z-index explicito para no depender del orden de pintado ni de que
+     algun hijo cree un contexto de apilamiento. */
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Cinco manchones superpuestos en los colores del logo. El vidrio
+     necesita color abajo para tener de que brillar: sobre un fondo plano
+     el backdrop-filter no tiene nada que hacer y las tarjetas se leen
+     como blanco sucio. Las medidas van en vw/vh para que la malla se
+     reacomode igual en un celular que en un monitor ancho. */
+  #fondo-marca {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: theme('colors.masa.crema');
+    background-image:
+      radial-gradient(55vw 55vh at 15% 10%, rgba(255, 198, 26, 0.62), transparent 70%),
+      radial-gradient(50vw 50vh at 85% 5%, rgba(245, 130, 31, 0.52), transparent 70%),
+      radial-gradient(45vw 50vh at 95% 78%, rgba(194, 65, 12, 0.32), transparent 70%),
+      radial-gradient(50vw 55vh at 5% 92%, rgba(245, 130, 31, 0.42), transparent 72%),
+      radial-gradient(42vw 42vh at 58% 48%, rgba(255, 236, 160, 0.55), transparent 70%);
+  }
+
+  /* Grano. Rompe el bandeado que dejan los degradados grandes en
+     pantallas de 8 bits y le saca el aspecto de plastico a la malla. */
+  #fondo-marca::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  /* La marca de agua va en su propia capa para poder bajarle la opacidad
+     sin desteñir tambien la malla. */
+  #fondo-marca::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/logo_masas.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: min(85vh, 820px) auto;
+    opacity: 0.07;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Superficies de vidrio
+
+   Cinco niveles, para que convertir una tarjeta sea cambiar `bg-white`
+   por una de estas clases y nada mas.
+
+   El `backdrop-saturate` es lo que separa el vidrio esmerilado del
+   plastico translucido: al desenfocar, el color de atras se lava, y
+   subir la saturacion se lo devuelve.
+   ------------------------------------------------------------------ */
+
+@layer components {
+  /* El caso general: tarjetas, paneles, tablas. */
+  .glass {
+    @apply bg-white/55 backdrop-blur-2xl backdrop-saturate-150 border border-white/70 shadow-vidrio;
+  }
+
+  /* Para lo que hay que poder leer si o si: modales, popovers,
+     formularios. Mas opaco a proposito. */
+  .glass-solido {
+    @apply bg-white/80 backdrop-blur-3xl backdrop-saturate-150 border border-white/80 shadow-vidrio-alto;
+  }
+
+  /* Barras de navegacion. No define de que lado va el borde: eso lo pone
+     quien la usa con border-r o border-b. */
+  .glass-nav {
+    @apply bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/50;
+  }
+
+  /* Superficies anidadas: filas dentro de una tarjeta, items de una lista,
+     bloques dentro de un modal. Sin blur a proposito — apilar
+     backdrop-filter sobre backdrop-filter es caro en celulares y ademas
+     enturbia el resultado. Alcanza con que sean algo mas claras que la
+     tarjeta que las contiene. */
+  .glass-sutil {
+    @apply bg-white/45 border border-white/60;
+  }
+
+  /* Zonas hundidas: encabezados de tabla, barras de totales, pies de
+     modal. Ocupan el lugar que tenia bg-gray-50. */
+  .glass-panel {
+    @apply bg-white/30;
+  }
+
+  /* Campos de formulario. Los inputs no heredan el fondo de la tarjeta:
+     el navegador les pinta blanco solido, asi que sobre vidrio quedaban
+     como parches opacos. Ademas centraliza el color del foco, que hoy es
+     azul y es lo unico que falta pasar a la paleta del logo. */
+  .campo {
+    @apply bg-white/65 border border-white/75 rounded-lg text-masa-carbon placeholder:text-masa-carbon/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
+  }
+
+  /* Sin backdrop-filter no hay vidrio posible, asi que se compensa con
+     opacidad para que el texto nunca termine leyendose sobre la malla de
+     color. Afecta sobre todo a Firefox con la opcion desactivada. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      @apply bg-white/90;
+    }
+
+    .glass-solido {
+      @apply bg-white/95;
+    }
+
+    .glass-nav {
+      @apply bg-white/95;
+    }
+
+    .glass-sutil {
+      @apply bg-white/80;
+    }
+
+    .glass-panel {
+      @apply bg-white/70;
+    }
+
+    .campo {
+      @apply bg-white/90;
+    }
+  }
+}

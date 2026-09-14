@@ -26,7 +26,7 @@ export function SelectorHora({ value, onChange, label = 'Hora de Entrega' }) {
         ref={disparador}
         type="button"
         onClick={() => setAbierto(a => !a)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border border-gray-300 rounded-md text-left bg-white transition-colors hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border border-white/80 rounded-md text-left bg-white/70 transition-colors hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           value ? 'text-gray-900' : 'text-gray-400'
         }`}
       >
@@ -41,7 +41,7 @@ export function SelectorHora({ value, onChange, label = 'Hora de Entrega' }) {
         <div
           ref={panel}
           style={{ position: 'fixed', top: posicion.top, left: posicion.left }}
-          className="z-[60] w-64 bg-white border border-gray-200 rounded-lg shadow-xl p-3"
+          className="z-[60] w-64 glass-solido rounded-2xl p-3"
         >
           <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto">
             {HORAS.map(h => (
@@ -52,7 +52,7 @@ export function SelectorHora({ value, onChange, label = 'Hora de Entrega' }) {
                 className={`px-2 py-1.5 text-sm rounded-md border transition-colors ${
                   value === h
                     ? 'bg-blue-600 text-white border-blue-600 font-semibold'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50 hover:border-blue-300'
+                    : 'bg-white/60 text-masa-carbon/80 border-white/70 hover:bg-white/90 hover:border-blue-300'
                 }`}
               >
                 {h}
@@ -60,13 +60,13 @@ export function SelectorHora({ value, onChange, label = 'Hora de Entrega' }) {
             ))}
           </div>
 
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-white/60">
             <label className="block text-xs font-medium text-gray-600 mb-1">Otra hora</label>
             <input
               type="time"
               value={value || ''}
               onChange={e => onChange(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 campo text-sm"
             />
           </div>
         </div>,

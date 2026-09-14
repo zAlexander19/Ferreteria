@@ -67,7 +67,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Últimas ventas: mostrador + pedidos completados y pagados */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="glass p-4 sm:p-6 rounded-2xl">
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
@@ -107,7 +107,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
       )}
 
       {/* Mostrador vs Pedidos */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="glass p-4 sm:p-6 rounded-2xl">
         <h3 className="text-lg font-bold text-gray-800 mb-1">Mostrador vs Pedidos</h3>
         <p className="text-sm text-gray-500 mb-4">Cuánto se vendió por cada canal.</p>
 
@@ -132,7 +132,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
 
             <ul className="w-full md:w-1/2 space-y-2">
               {porOrigen.map(o => (
-                <li key={o.origen} className="flex items-center justify-between gap-3 border border-gray-100 rounded-md px-3 py-2">
+                <li key={o.origen} className="flex items-center justify-between gap-3 border border-white/60 rounded-md px-3 py-2">
                   <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: COLOR_ORIGEN[o.origen] }} />
                     {o.origen}
@@ -151,7 +151,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
       {/* Contenedor principal para Estadísticas Superiores */}
       <div className="flex flex-col gap-6 mb-6">
         {/* Gráfico de Barras de Stock (Ancho de todo el dashboard) */}
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-blue-100 flex flex-col">
+        <div className="glass p-4 sm:p-6 rounded-2xl flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700">Estado de Inventario</h3>
             <Package className="w-5 h-5 text-blue-500" />
@@ -199,7 +199,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Costo vs ganancia, día a día o mes a mes */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="glass p-4 sm:p-6 rounded-2xl">
             <h3 className="text-lg font-bold text-gray-800 mb-1">Análisis Financiero (Ventas)</h3>
             <p className="text-sm text-gray-500 mb-4">
               {porAnio ? 'Mes a mes' : 'Día a día'} · {nombrePeriodo}
@@ -229,7 +229,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
           </div>
 
           {/* Cuánta plata y cuántas unidades por tipo de masa */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="glass p-4 sm:p-6 rounded-2xl">
             <h3 className="text-lg font-bold text-gray-800 mb-1">Ventas por Categoría</h3>
             <p className="text-sm text-gray-500 mb-4">Cuánto se vendió de cada tipo · {nombrePeriodo}</p>
 
@@ -254,7 +254,7 @@ export function Statistics({ products, sales = [], orders = [] }) {
 
                 <ul className="w-full md:w-1/2 space-y-2">
                   {porCategoria.map((c, i) => (
-                    <li key={c.categoria} className="flex items-center justify-between gap-3 border border-gray-100 rounded-md px-3 py-2">
+                    <li key={c.categoria} className="flex items-center justify-between gap-3 border border-white/60 rounded-md px-3 py-2">
                       <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                         <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                         {c.categoria}

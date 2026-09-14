@@ -29,7 +29,7 @@ export function RangoFechas({ desde, hasta, onChange }) {
         className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
           hayRango
             ? 'bg-blue-50 border-blue-300 text-blue-800'
-            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            : 'bg-white/60 border-white/80 text-masa-carbon/80 hover:bg-white/90'
         }`}
       >
         <CalendarRange className="w-4 h-4" />
@@ -51,7 +51,7 @@ export function RangoFechas({ desde, hasta, onChange }) {
         <div
           ref={panel}
           style={{ position: 'fixed', top: posicion.top, left: posicion.left }}
-          className="z-[60] bg-white border border-gray-200 rounded-lg shadow-xl p-3"
+          className="z-[60] glass-solido rounded-2xl p-3"
         >
           <p className="text-xs text-gray-500 mb-2 px-1">
             Tocá el primer día y después el último. El período queda marcado.
@@ -64,11 +64,11 @@ export function RangoFechas({ desde, hasta, onChange }) {
             weekStartsOn={1}
             styles={{ root: { margin: 0 } }}
           />
-          <div className="flex justify-between items-center gap-2 pt-2 border-t border-gray-100 mt-2">
+          <div className="flex justify-between items-center gap-2 pt-2 border-t border-white/60 mt-2">
             <button
               type="button"
               onClick={() => onChange({ desde: '', hasta: '' })}
-              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded-md"
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-white/60 rounded-md"
             >
               Limpiar
             </button>
