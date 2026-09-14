@@ -3,6 +3,7 @@ import { CalendarClock, Plus, Search, Trash2, X, ShoppingCart, Pencil, LayoutGri
 import { faltantesPorProducto } from '../lib/inventory';
 import { unidadesDeItem, unidadesTotales, agruparPorEstado, filtrarPedidos, saldoPendiente } from '../lib/pedidos';
 import { OrderCard } from './OrderCard';
+import { DialogoCobro } from './DialogoCobro';
 import { RangoFechas } from './RangoFechas';
 import { SelectorFecha } from './SelectorFecha';
 import { SelectorHora } from './SelectorHora';
@@ -31,7 +32,7 @@ const FORM_VACIO = {
 
 const clp = valor => (Number(valor) || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
 
-export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrderStatus, onDeleteOrder }) {
+export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrderStatus, onUpdateOrderPayment, onDeleteOrder }) {
   const faltantes = useMemo(() => faltantesPorProducto(products), [products]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,16 +47,18 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
   const [estadoPago, setEstadoPago] = useState('Todos');
   const [vista, setVista] = useState(() => localStorage.getItem(VISTA_GUARDADA) || 'tarjeta');
   const [pedidoAbierto, setPedidoAbierto] = useState(null);
+  const [pedidoACobrar, setPedidoACobrar] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => { localStorage.setItem(VISTA_GUARDADA, vista); }, [vista]);
 
   const pedidosFiltrados = useMemo(
-    () => filtrarPedidos(orders, { desde, hasta, estadoPago }),
-    [orders, desde, hasta, estadoPago]
+    () => filtrarPedidos(orders, { desde, hasta, estadoPago, texto: busqueda }),
+    [orders, desde, hasta, estadoPago, busqueda]
   );
 
   const secciones = useMemo(() => agruparPorEstado(pedidosFiltrados), [pedidosFiltrados]);
-  const hayFiltro = Boolean(desde || hasta || estadoPago !== 'Todos');
+  const hayFiltro = Boolean(desde || hasta || estadoPago !== 'Todos' || busqueda.trim());
 
   const siguienteEstadoPago = () => {
     const i = ESTADOS_FILTRO.indexOf(estadoPago);
@@ -192,7 +195,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
   return (
     <div className="flex flex-col h-full gap-4 sm:gap-6">
       {/* Controles */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 glass p-4 rounded-2xl">
         <button
           onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
@@ -202,6 +205,29 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
         </button>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-masa-carbon/40" />
+            </div>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar cliente, telefono o N de pedido"
+              className="pl-9 pr-9 py-2 w-full sm:w-72 campo text-sm"
+            />
+            {busqueda && (
+              <button
+                type="button"
+                onClick={() => setBusqueda('')}
+                title="Limpiar busqueda"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-masa-carbon/40 hover:text-masa-carbon"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           <RangoFechas
             desde={desde}
             hasta={hasta}
@@ -213,7 +239,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
             onClick={siguienteEstadoPago}
             title="Tocá para cambiar el filtro de pago"
             className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-              estadoPago === 'Todos' ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              estadoPago === 'Todos' ? 'bg-white/60 border-white/80 text-masa-carbon/80 hover:bg-white/90'
                 : estadoPago === 'Pagado' ? 'bg-green-50 border-green-300 text-green-800'
                 : estadoPago === 'Abonado' ? 'bg-amber-50 border-amber-300 text-amber-800'
                 : 'bg-red-50 border-red-300 text-red-800'
@@ -223,12 +249,12 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
             Pago: {estadoPago}
           </button>
 
-          <div className="flex rounded-md border border-gray-300 overflow-hidden">
+          <div className="flex rounded-md border border-white/80 overflow-hidden">
             <button
               type="button"
               onClick={() => setVista('tarjeta')}
               title="Ver en tarjetas"
-              className={`p-2 ${vista === 'tarjeta' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`p-2 ${vista === 'tarjeta' ? 'bg-blue-600 text-white' : 'bg-white/60 text-masa-carbon/70 hover:bg-white/90'}`}
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
@@ -236,7 +262,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               type="button"
               onClick={() => setVista('lista')}
               title="Ver en lista"
-              className={`p-2 border-l border-gray-300 ${vista === 'lista' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`p-2 border-l border-white/80 ${vista === 'lista' ? 'bg-blue-600 text-white' : 'bg-white/60 text-masa-carbon/70 hover:bg-white/90'}`}
             >
               <List className="w-4 h-4" />
             </button>
@@ -251,7 +277,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
       )}
 
       {pedidosFiltrados.length === 0 ? (
-        <div className="p-10 text-center text-gray-500 bg-white rounded-lg border border-gray-100 shadow-sm">
+        <div className="p-10 text-center text-gray-500 glass rounded-2xl">
           <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
           <p className="text-lg">
             {orders.length === 0 ? 'No hay pedidos registrados' : 'No hay pedidos con esos filtros'}
@@ -267,7 +293,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               <section key={clave}>
                 <h3 className={`text-sm font-bold uppercase tracking-wide mb-3 flex items-center gap-2 ${color}`}>
                   {titulo}
-                  <span className="text-xs font-semibold bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
+                  <span className="text-xs font-semibold bg-white/70 text-masa-carbon/70 rounded-full px-2 py-0.5">
                     {lista.length}
                   </span>
                 </h3>
@@ -282,6 +308,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                         onEdit={openEditModal}
                         onUpdateOrderStatus={onUpdateOrderStatus}
                         onDeleteOrder={onDeleteOrder}
+                        onCobrar={setPedidoACobrar}
                       />
                     ))}
                   </div>
@@ -295,7 +322,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                           <li key={order.id}>
                             <button
                               onClick={() => setPedidoAbierto(order)}
-                              className="w-full text-left bg-white rounded-lg border border-gray-200 shadow-sm p-3 active:bg-blue-50"
+                              className="w-full text-left glass rounded-2xl p-3 active:bg-white/80"
                             >
                               <div className="flex justify-between items-start gap-2">
                                 <div className="min-w-0">
@@ -324,7 +351,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                                 ))}
                               </ul>
 
-                              <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                              <div className="mt-2 pt-2 border-t border-white/60 flex justify-between items-center">
                                 <span className="text-xs text-gray-500">
                                   {unidadesTotales(order.items)} uds en total
                                 </span>
@@ -339,9 +366,9 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                       })}
                     </ul>
 
-                    <div className="hidden md:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                      <thead className="bg-gray-50">
+                    <div className="hidden md:block glass rounded-2xl overflow-x-auto">
+                    <table className="min-w-full divide-y divide-white/60 text-sm">
+                      <thead className="glass-panel">
                         <tr className="text-left text-xs uppercase text-gray-500">
                           <th className="px-4 py-2">Entrega</th>
                           <th className="px-4 py-2">Cliente</th>
@@ -352,7 +379,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                           <th className="px-4 py-2">Pago</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-white/60">
                         {lista.map(order => {
                           const pago = order.paymentStatus || 'Sin pagar';
                           return (
@@ -403,7 +430,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                                   ))}
                                 </ul>
                                 {order.items.length > 1 && (
-                                  <div className="mt-1 pt-1 border-t border-gray-200 text-xs text-gray-500">
+                                  <div className="mt-1 pt-1 border-t border-white/60 text-xs text-gray-500">
                                     Total {unidadesTotales(order.items)} uds
                                   </div>
                                 )}
@@ -440,14 +467,14 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
       {/* Tarjeta en popup, al tocar una fila de la lista */}
       {pedidoAbierto && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto"
+          className="fixed inset-0 bg-masa-carbon/50 backdrop-blur-sm flex items-start sm:items-center justify-center z-50 p-4 overflow-y-auto"
           onClick={() => setPedidoAbierto(null)}
         >
           <div className="w-full max-w-md my-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-end mb-2">
               <button
                 onClick={() => setPedidoAbierto(null)}
-                className="p-2 bg-white rounded-full text-gray-500 hover:text-gray-800 shadow"
+                className="p-2 bg-white/80 backdrop-blur rounded-full text-masa-carbon/60 hover:text-masa-carbon shadow-vidrio"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -458,17 +485,29 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               faltantes={faltantes}
               onEdit={(o) => { setPedidoAbierto(null); openEditModal(o); }}
               onUpdateOrderStatus={(id, st) => { onUpdateOrderStatus(id, st); setPedidoAbierto(null); }}
+              onCobrar={(o) => { setPedidoAbierto(null); setPedidoACobrar(o); }}
               onDeleteOrder={(id) => { onDeleteOrder(id); setPedidoAbierto(null); }}
             />
           </div>
         </div>
       )}
 
+      {pedidoACobrar && (
+        <DialogoCobro
+          order={pedidoACobrar}
+          onCerrar={() => setPedidoACobrar(null)}
+          onGuardar={(datosPago) => {
+            onUpdateOrderPayment(pedidoACobrar.id, datosPago);
+            setPedidoACobrar(null);
+          }}
+        />
+      )}
+
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
-            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="fixed inset-0 bg-masa-carbon/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="glass-solido rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-white/60 glass-panel">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 {editingId ? <Pencil className="w-5 h-5 text-blue-600" /> : <CalendarClock className="w-5 h-5 text-blue-600" />}
                 {editingId ? `Editar pedido ${editingId}` : 'Crear Nuevo Pedido'}
@@ -480,7 +519,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
 
             <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
               {/* Datos */}
-              <div className="w-full md:w-1/2 p-4 sm:p-6 md:border-r border-gray-100 md:overflow-y-auto">
+              <div className="w-full md:w-1/2 p-4 sm:p-6 md:border-r border-white/60 md:overflow-y-auto">
                 <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente</label>
@@ -489,7 +528,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                       name="customerName"
                       value={formData.customerName}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 campo"
                       required
                     />
                   </div>
@@ -500,7 +539,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 campo"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -514,7 +553,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                     />
                   </div>
 
-                  <div className="border-t border-gray-100 pt-4">
+                  <div className="border-t border-white/60 pt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Estado del pago</label>
                     <div className="grid grid-cols-3 gap-2">
                       {ESTADOS_PAGO.map(estado => (
@@ -525,7 +564,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                           className={`px-2 py-2 rounded-md text-sm font-medium border transition-colors ${
                             formData.paymentStatus === estado
                               ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                              : 'bg-white/60 text-masa-carbon/80 border-white/80 hover:bg-white/90'
                           }`}
                         >
                           {estado}
@@ -546,7 +585,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                             min="0"
                             value={formData.paidAmount}
                             onChange={handleInputChange}
-                            className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-7 px-3 py-2 campo"
                             placeholder="0"
                           />
                         </div>
@@ -560,8 +599,8 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
               </div>
 
               {/* Carrito */}
-              <div className="w-full md:w-1/2 flex flex-col bg-gray-50 md:h-full md:overflow-hidden">
-                <div className="p-4 border-b border-gray-200 bg-white">
+              <div className="w-full md:w-1/2 flex flex-col bg-white/30 md:h-full md:overflow-hidden">
+                <div className="p-4 border-b border-white/60 glass-panel">
                   <label className="block text-sm font-bold text-gray-700 mb-2">Agregar Productos (Bolsas)</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -572,16 +611,16 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                       placeholder="Buscar para añadir..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="pl-9 pr-4 py-2 w-full campo text-sm"
                     />
                     {searchResults.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 z-20 max-h-48 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 glass-solido rounded-xl mt-1 z-20 max-h-48 overflow-y-auto">
                         {searchResults.map(product => (
                           <button
                             key={product.id}
                             type="button"
                             onClick={() => addToCart(product)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 text-sm flex justify-between gap-2"
+                            className="w-full text-left px-3 py-2 hover:bg-white/60 border-b border-white/60 last:border-0 text-sm flex justify-between gap-2"
                           >
                             <span className="min-w-0">
                               <span className="font-medium block truncate">{product.name}</span>
@@ -606,7 +645,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                     </div>
                   ) : (
                     cart.map(item => (
-                      <div key={item.id} className="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                      <div key={item.id} className="flex justify-between items-center p-3 glass-sutil rounded-2xl">
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="font-medium text-sm text-gray-900 truncate" title={item.name}>{item.name}</div>
                           <div className="text-blue-600 text-xs font-semibold">${item.price} c/u</div>
@@ -620,7 +659,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                             min="1"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                            className="w-16 px-2 py-1 text-center campo rounded text-sm"
                           />
                           <button type="button" onClick={() => removeFromCart(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
                             <Trash2 className="w-4 h-4" />
@@ -631,9 +670,9 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                   )}
                 </div>
 
-                <div className="p-4 bg-white border-t border-gray-200">
+                <div className="p-4 glass-panel border-t border-white/60">
                   {cart.length > 0 && (
-                    <div className="text-sm text-gray-600 bg-gray-50 rounded-md px-3 py-2 mb-3 border border-gray-100">
+                    <div className="text-sm text-gray-600 glass-sutil rounded-xl px-3 py-2 mb-3">
                       En total: <span className="font-semibold">{cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'bolsa' : 'bolsas'}</span>
                       {' · '}
                       <span className="font-semibold">{unidadesTotales(cart)} unidades</span> de masa
@@ -647,7 +686,7 @@ export function Orders({ products, orders, onAddOrder, onEditOrder, onUpdateOrde
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+                      className="w-full sm:w-auto px-4 py-2 border border-white/80 bg-white/60 text-masa-carbon/80 font-medium rounded-md hover:bg-white/90"
                     >
                       Cancelar
                     </button>

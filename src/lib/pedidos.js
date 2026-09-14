@@ -87,7 +87,20 @@ export function agruparPorEstado(orders) {
   };
 }
 
-export function filtrarPedidos(orders, { desde, hasta, estadoPago } = {}) {
+// Deja un texto listo para comparar: sin tildes y en minusculas. Lo de las
+// tildes no es un lujo — con clientes chilenos, que buscar "Nunez" no
+// encuentre a "Nunez" con tilde es un bug garantizado en el mostrador, y la
+// duena no va a escribir los acentos cuando esta apurada.
+function paraBuscar(valor) {
+  return String(valor ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+export function filtrarPedidos(orders, { desde, hasta, estadoPago, texto } = {}) {
+  const buscado = paraBuscar(texto).trim();
+
   return (orders || []).filter(order => {
     const fecha = order.deliveryDate || '';
 
@@ -100,6 +113,42 @@ export function filtrarPedidos(orders, { desde, hasta, estadoPago } = {}) {
       if (pago !== estadoPago) return false;
     }
 
+    if (buscado) {
+      const campos = [order.customerName, order.phone, order.id];
+      if (!campos.some(campo => paraBuscar(campo).includes(buscado))) return false;
+    }
+
     return true;
   });
+}
+
+// Deja consistentes el estado de pago y el monto abonado antes de guardarlos.
+// Vive aca y no en el formulario porque ahora hay dos caminos que escriben lo
+// mismo (el modal de edicion y el popup de cobro) y no pueden discrepar: si
+// uno dejara un monto abonado en un pedido marcado Pagado, `saldoPendiente`
+// informaria mal lo que falta cobrar.
+export function normalizarCobro({ paymentStatus, paidAmount } = {}, total = 0) {
+  // Pagado y Sin pagar no tienen monto parcial: el saldo sale del total.
+  if (paymentStatus !== 'Abonado') {
+    return { ok: true, paymentStatus, paidAmount: 0 };
+  }
+
+  const monto = Number(paidAmount);
+  if (!Number.isFinite(monto) || monto <= 0) {
+    return { ok: false, message: 'Puso cuanto abono? Tiene que ser un monto mayor a 0.' };
+  }
+
+  const totalPedido = Number(total) || 0;
+  if (monto > totalPedido) {
+    return { ok: false, message: 'El abono no puede ser mayor que el total del pedido.' };
+  }
+
+  // Abonar el total es pagar. Si se guardara como Abonado, el pedido quedaria
+  // con saldo 0 pero con el chip ambar de "Abonado", y la duena lo leeria como
+  // que todavia le deben.
+  if (monto === totalPedido) {
+    return { ok: true, paymentStatus: 'Pagado', paidAmount: 0 };
+  }
+
+  return { ok: true, paymentStatus: 'Abonado', paidAmount: monto };
 }
