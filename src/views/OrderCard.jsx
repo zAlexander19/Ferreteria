@@ -1,5 +1,6 @@
-import { CalendarClock, Trash2, CheckCircle, Clock, X, User, AlertTriangle, Pencil, Wallet } from 'lucide-react';
+import { CalendarClock, Clock, User, AlertTriangle } from 'lucide-react';
 import { EtiquetasProducto } from './EtiquetasProducto';
+import { AccionesPedido } from './AccionesPedido';
 import { unidadesDeItem, unidadesTotales, saldoPendiente } from '../lib/pedidos';
 import { mostrarFecha } from '../lib/fechas';
 
@@ -11,7 +12,7 @@ const ESTILO_PAGO = {
   'Sin pagar': 'bg-red-100 text-red-800 border border-red-200',
 };
 
-export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDeleteOrder, onCobrar }) {
+export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDeleteOrder, onCobrar, onVerBoleta }) {
   const isReleased = order.status === 'Cancelado' || order.stockReserved === false;
 
   // Faltante en vivo contra el stock de hoy: si el pedido sigue pendiente y
@@ -24,12 +25,6 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
   // Los pedidos creados antes de que existiera el campo cuentan como sin pagar.
   const estadoPago = order.paymentStatus || 'Sin pagar';
   const saldo = saldoPendiente(order);
-
-  const handleComplete = () => {
-    if (window.confirm(`¿Marcar el pedido de ${order.customerName} como completado?`)) {
-      onUpdateOrderStatus(order.id, 'Completado');
-    }
-  };
 
   return (
     <div className="glass rounded-2xl overflow-hidden flex flex-col">
@@ -130,54 +125,14 @@ export function OrderCard({ order, faltantes, onEdit, onUpdateOrderStatus, onDel
       </div>
 
       <div className="p-3 glass-panel border-t border-white/60 flex gap-2 justify-end">
-        {/* El cobro es independiente de la entrega: un pedido entregado puede
-            seguir sin pagarse. En un cancelado no hay nada que cobrar. */}
-        {order.status !== 'Cancelado' && (
-          <button
-            onClick={() => onCobrar(order)}
-            className="p-2 text-masa-tostado hover:bg-masa-amarillo/25 rounded-xl transition-colors flex items-center gap-1"
-            title="Cambiar estado de pago"
-          >
-            <Wallet className="w-5 h-5" />
-            <span className="text-sm font-medium">Cobrar</span>
-          </button>
-        )}
-
-        {order.status === 'Pendiente' && (
-          <>
-            <button
-              onClick={() => onEdit(order)}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              title="Editar pedido"
-            >
-              <Pencil className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => onUpdateOrderStatus(order.id, 'Cancelado')}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              title="Cancelar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleComplete}
-              className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors flex items-center gap-1"
-              title="Marcar como Completado"
-            >
-              <CheckCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Entregar</span>
-            </button>
-          </>
-        )}
-        <button
-          onClick={() => {
-            if (window.confirm('¿Eliminar pedido permanentemente?')) onDeleteOrder(order.id);
-          }}
-          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors ml-auto"
-          title="Eliminar"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+        <AccionesPedido
+          order={order}
+          onEdit={onEdit}
+          onUpdateOrderStatus={onUpdateOrderStatus}
+          onDeleteOrder={onDeleteOrder}
+          onCobrar={onCobrar}
+          onVerBoleta={onVerBoleta}
+        />
       </div>
     </div>
   );
